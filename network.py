@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-class ConvolutionalNeuralNetwork(object):
+class DeepQNetwork(object):
     '''
     Set up weight variable.
     '''
@@ -30,34 +30,37 @@ class ConvolutionalNeuralNetwork(object):
             # Set random seed
             tf.set_random_seed(random_seed)
 
+            # Action input batch with shape [?, action_size]
             self.a = tf.placeholder(tf.float32, [None, action_size], name='action-input')
-            #self.reward = tf.placeholder('float32', [None], name='reward-input')
 
-            # Input with shape [?, 84, 84, 4]
+            # State input batch with shape [?, 84, 84, 4]
             self.s = tf.placeholder(tf.float32, shape=[None, 84, 84, 4], name='s-input')
-            # Desired Q-value with shape [?]
+
+            # Desired Q-value batch with shape [?, 1]
             self.y = tf.placeholder(tf.float32, shape=[None, 1], name='desired-q_value')
 
-            # Convolutional layer 1 weights and bias with stride=4, produces 16 19x19 outputs
+            # Convolutional layer 1 weights and bias with stride=4
+            # Produces 16 19x19 outputs
             W_conv1 = self.weight_variable([8, 8, 4, 16], 'w_conv1')
             b_conv1 = self.bias_variable([16], 'bias-1')
             stride_1 = 4
 
-            # First conv layer output
+            # Convolutional layer 1 output
             with tf.name_scope('conv-1') as scope:
                 h_conv1 = tf.nn.relu(self.conv2d(self.s, W_conv1, stride_1) + b_conv1)
 
-            # Second layer conv weights and biases with stride=2, produces 32 9x9 outputs
+            # Cconvolutional laer 2 weights and biases with stride=2
+            # Produces 32 9x9 outputs
             W_conv2 = self.weight_variable([4, 4, 16, 32], name='w-conv2')
             b_conv2 = self.bias_variable([32], name='b-conv2')
             stride_2 = 2
 
-
-            # Convolutional layer 2's output 
+            # Convolutional layer 2 output 
             with tf.name_scope('conv-2') as scope:
                 h_conv2 = tf.nn.relu(self.conv2d(h_conv1, W_conv2, stride_2) + b_conv2)
 
             # 256 Fully connected units with weights and biases
+            # Weights total 9x9x32 (2592) from the output of the 2nd convolutional layer
             W_fc1 = self.weight_variable([9*9*32, 256], name='w-fc')
             b_fc1 = self.bias_variable([256], name='b-fc')
 
@@ -78,8 +81,6 @@ class ConvolutionalNeuralNetwork(object):
             with tf.name_scope('loss') as scope:
                 action_q_values = tf.reduce_sum(tf.mul(self.q_values, self.a), reduction_indices=1)
                 self.obj_function = tf.reduce_mean(tf.square(self.y - action_q_values))
-                #self.obj_function = tf.mean(tf.square(action_q_values, self.y))
-                #self.obj_function = tf.reduce_mean(tf.square(self.y_ - self.y))
 
             with tf.name_scope('train') as scope:
                 if optimizer.lower() == 'adam':
@@ -93,9 +94,9 @@ class ConvolutionalNeuralNetwork(object):
                     self.train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(self.obj_function)
 
             # Specify how accuracy is measured
-           # with tf.name_scope('accuracy') as scope:
-            #    correct_prediction = tf.equal(tf.argmax(self.y,1), tf.argmax(self.y_,1))
-            #    self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            with tf.name_scope('accuracy') as scope:
+                correct_prediction = tf.equal(tf.argmax(self.q_values, 1), tf.argmax(self.y, 1))
+                self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
                 
             init = tf.global_variables_initializer()
             self.sess.run(init)
@@ -128,10 +129,11 @@ class ConvolutionalNeuralNetwork(object):
     '''
     Measures the accuracy of the network based on the specified accuracy measure, the input and the desired output.
     '''
-    #def get_accuracy(self, x_input, desired_output):
-    #    acc = self.sess.run(self.accuracy, feed_dict={self.x: x_input, 
-    #                                        self.y_: desired_output})
-    #    return acc
+    def get_accuracy(self, s_input, desired_output):
+        with tf.device(self.device):
+            acc = self.sess.run(self.accuracy, feed_dict={self.s: s_input, 
+                                                        self.y: desired_output})
+        return acc
 
     def sync_from(self, src_network, name=None):
         src_vars = src_network.get_vars()
