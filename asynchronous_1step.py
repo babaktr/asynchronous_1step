@@ -131,7 +131,6 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
         local_step = 0
         episode_reward = 0
         average_q_max = 0
-
         terminal = False
 
         # Get initial game observation
@@ -151,7 +150,7 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
             new_state, reward, terminal = local_game_state.step(action)
             
             # Get the new state's Q-values
-            q_values_new = local_network.predict([new_state])
+            q_values_new = target_network.predict([new_state])
 
             if settings.method == 'sarsa':
                 # Get Q(s',a') for selected action a to update Q(s,a)
@@ -162,13 +161,10 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
 
             if not terminal: 
                 # Non-terminal state, update with reward + gamma * max(Q(s'a')
-                update = reward + (settings.gamma * q_value_new)
-            else: 
-                # Terminal state, update using reward
-                update = reward
+                reward += (settings.gamma * q_value_new)
 
             # Fill batch
-            y_batch.append([update])
+            y_batch.append([reward])
             state_batch.append([state])
             action_batch.append(onehot_vector(action, local_game_state.action_size))
 
