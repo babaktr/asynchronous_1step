@@ -126,7 +126,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
 
         # Get initial game observation
         state = local_game_state.reset()
-
+        
         while not terminal:
             # Get the Q-values of the current state
             q_values = local_network.predict(sess, [state])
@@ -195,6 +195,8 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
                 print 'Global step: {}, Episode steps: {}, Reward: {}, Qmax: {}, Loss: {}, Accuracy: {}, Epsilon: {}'.format(global_step, 
                     local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'),  format(np.average(loss_arr), '.4f'), 
                     format(np.average(acc_arr), '.2f'), format(np.average(epsilon_arr), '.2f'))
+
+                # Update stats
                 stats.update({'loss': np.average(loss_arr), 
                             'accuracy': np.average(acc_arr),
                             'qmax': np.average(q_max_arr),
