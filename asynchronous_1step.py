@@ -116,14 +116,13 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
     # Prepare stats
     q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
 
-    time.sleep(5*thread_index+1)
+    time.sleep(3*thread_index)
     local_step = 0
-
     while global_step < global_max_steps:
         # Reset counters and values
         local_step = 0
         average_q_max = 0
-        terminal = final_epsilon
+        terminal = False
 
         # Get initial game observation
         state = local_game_state.reset()
@@ -172,7 +171,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
 
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
-                print global_step
+                print 'Updated target network on step: {}'.format(global_step)
                 sess.run(target_network.sync_from(local_network))
 
             # Update online network on I_AsyncUpdate
@@ -192,7 +191,9 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
                 y_batch, state_batch, action_batch = reset_gradient_arrays()
       
             if terminal:
-                print('global_step: {}, thread: {}, episode_reward: {}, steps: {}, avg_acc: {}'.format(global_step, thread_index, np.sum(reward_arr), local_step, np.average(acc_arr)))
+                print 'Global step: {}, Episode steps: {}, Reward: {}, Qmax: {}, Loss: {}, Accuracy: {}, Epsilon: {}'.format(global_step, 
+                    local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'),  format(np.average(loss_arr), '.4f'), 
+                    format(np.average(acc_arr), '.2f'), format(np.average(epsilon_arr), '.2f'))
                 stats.update({'loss': np.average(loss_arr), 
                             'accuracy': np.average(acc_arr),
                             'qmax': np.average(q_max_arr),
