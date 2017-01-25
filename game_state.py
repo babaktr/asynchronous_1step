@@ -8,20 +8,22 @@ import matplotlib.pyplot as plt
 import time
 
 class GameState(object):
-    def __init__(self, random_seed, log, game, frame_skip=0, display=False, no_op_max=7):
+    def __init__(self, random_seed, log, game, frame_skip, display, no_op_max):
         np.random.seed(random_seed)
-
         self.display = display
-
-        self.game = gym.make(game)
-
-        # Get minimal action set
-        self.action_size = self.game.action_space.n
 
         self.log = log
 
+        # Load game environment
+        self.game = gym.make(game)
+        # Get minimal action set
+        self.action_size = self.game.action_space.n
+
+    '''
+    Resets game environments and regenerates new internal state s_t.
+    '''
     def reset(self):
-        x_t = self.game.reset()
+        x_t_raw = self.game.reset()
 
         ## Make random initial actions
         #if self.no_op_max > 0:
@@ -29,21 +31,27 @@ class GameState(object):
         #    for _ in range(n_no_actions):
         #        self.ale.act(0)
 
-        x_t = self.process_frame(x_t)
+        x_t = self.process_frame(x_t_raw)
 
         self.s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
 
         return self.s_t
 
+    '''
+    Processes image frame for network input.
+    '''
     def process_frame(self, frame):
         return resize(rgb2gray(frame), (84, 84))
 
+    '''
+    Make action and observe enviroment return.
+    '''
     def step(self, action):
         if self.display:
             self.game.render()
 
-        x_t1, reward, terminal, info = self.game.step(action)
-        x_t1 = self.process_frame(x_t1)
+        x_t1_raw, reward, terminal, info = self.game.step(action)
+        x_t1 = self.process_frame(x_t1_raw)
 
         #plt.imshow(x_t1)
         #plt.show()
@@ -59,5 +67,8 @@ class GameState(object):
 
         return self.s_t1, reward, terminal
 
+    ''' 
+    Update internal game state s_t to s_t1.
+    '''
     def update_state(self):
         self.s_t = self.s_t1
