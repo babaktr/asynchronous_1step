@@ -121,7 +121,6 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
     while global_step < global_max_steps:
         # Reset counters and values
         local_step = 0
-        average_q_max = 0
         terminal = False
 
         # Get initial game observation
@@ -164,7 +163,6 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
             # Update counters and values
             local_step += 1
             global_step += 1
-            average_q_max += np.max(q_values)
 
             # Save for stats
             reward_arr.append(reward)
@@ -192,8 +190,8 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
                 y_batch, state_batch, action_batch = reset_gradient_arrays()
       
             if terminal:
-                print 'Global step: {}, Episode steps: {}, Reward: {}, Qmax: {}, Loss: {}, Accuracy: {}, Epsilon: {}'.format(global_step, 
-                    local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'),  format(np.average(loss_arr), '.4f'), 
+                print 'Thread: {} Global step: {}, Episode steps: {}, Reward: {}, Qmax: {}, Loss: {}, Accuracy: {}, Epsilon: {}'.format(thread_index, 
+                    global_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'),  format(np.average(loss_arr), '.4f'), 
                     format(np.average(acc_arr), '.2f'), format(np.average(epsilon_arr), '.2f'))
 
                 # Update stats
