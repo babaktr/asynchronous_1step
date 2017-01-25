@@ -11,8 +11,8 @@ class GameState(object):
     def __init__(self, random_seed, log, game, frame_skip, display, no_op_max):
         np.random.seed(random_seed)
         self.display = display
-
-        self.log = log
+        self.frame_skip = frame_skip
+        self.log = log  
 
         # Load game environment
         self.game = gym.make(game)
@@ -24,6 +24,8 @@ class GameState(object):
     '''
     def reset(self):
         x_t_raw = self.game.reset()
+        #x_t_raw = self.game.render(mode='rgb_array')
+
 
         ## Make random initial actions
         #if self.no_op_max > 0:
@@ -50,7 +52,13 @@ class GameState(object):
         if self.display:
             self.game.render()
 
-        x_t1_raw, reward, terminal, info = self.game.step(action)
+        reward = 0
+        for n in range(self.frame_skip):
+            x_t1_raw, r, terminal, info = self.game.step(action)
+            reward += r
+            if terminal:
+                break
+        #x_t1_raw = self.game.render(mode='rgb_array')
         x_t1 = self.process_frame(x_t1_raw)
 
         #plt.imshow(x_t1)
