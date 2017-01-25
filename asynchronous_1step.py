@@ -141,15 +141,16 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
             # Get the new state's Q-values
             q_values_new = target_network.predict(sess, [new_state])
 
-            if settings.method == 'sarsa':
-                # Get Q(s',a') for selected action a to update Q(s,a)
+            if settings.method.lower() == 'sarsa':
+                # Get Q(s',a') for selected action to update Q(s,a)
                 q_value_new = q_values_new[action]
             else:
                 # Get max(Q(s',a')) to update Q(s,a)
                 q_value_new = np.max(q_values_new)
 
             if not terminal: 
-                # Non-terminal state, update with reward + gamma * max(Q(s'a')
+                # Q-learning: update with reward + gamma * max(Q(s',a')
+                # SARSA: update with reward + gamma * Q(s',a') for the selected action
                 update = reward + (settings.gamma * q_value_new)
             else:
                 # Terminal state, update using reward
@@ -262,23 +263,23 @@ sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
                                         allow_soft_placement=True))
 
 # Statistics summary writer
-summary_dir = './logs/asynchronous-1step-{}_game-{}/'.format(settings.method, settings.game)
+summary_dir = './logs/asynchronous-1step-{}_game-{}_parallel-{}_global-max-{}_frame-skip{}/'.format(settings.method, 
+    settings.game, settings.parallel_agents, settings.global_max_steps, settings.frame_skip)
 summary_writer = tf.summary.FileWriter(summary_dir, sess.graph)
 stats = Stats(sess, summary_writer)
 
 init = tf.global_variables_initializer()
 sess.run(init)
 
-# Start up parallel workers
+# Prepare parallel workers
 workers = []
 for n in range(settings.parallel_agents):
     worker = Thread(target=worker_thread,
-                        args=(n, local_networks[n], local_game_states[n]))
+                    args=(n, local_networks[n], local_game_states[n]))
     workers.append(worker)
 
-# Start workers
+# Start and join workers to start training
 for t in workers:
     t.start()
-# Join workers
 for t in workers:
     t.join()
