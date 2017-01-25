@@ -9,7 +9,6 @@ import time
 
 class GameState(object):
     def __init__(self, random_seed, log, game, frame_skip=0, display=False, no_op_max=7):
-        print random_seed
         np.random.seed(random_seed)
 
         self.display = display
