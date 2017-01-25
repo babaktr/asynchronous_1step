@@ -16,7 +16,7 @@ class GameState(object):
         self.game = gym.make(game)
 
         # Get minimal action set
-        self.action_size = 3 #self.game.action_space.n
+        self.action_size = self.game.action_space.n
 
         self.log = log
 
@@ -55,9 +55,7 @@ class GameState(object):
         # Clip reward to [-1, 1]
         reward = np.clip(reward, -1, 1)
 
-        #print 's_t shape:{}'.format(self.s_t.shape)
         self.s_t1 = np.append(self.s_t[:,:,1:], x_t1.reshape(84, 84, 1), axis=2)
-        #print 's_t1 shape:{}'.format(self.s_t1.shape)
 
         return self.s_t1, reward, terminal
 
