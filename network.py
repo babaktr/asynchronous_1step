@@ -26,10 +26,10 @@ class DeepQNetwork(object):
       return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], 
                                 padding='VALID')
 
-    def __init__(self, index, device, random_seed, action_size, learning_rate, optimizer):
+    def __init__(self, index, name, device, random_seed, action_size, learning_rate, optimizer):
         self.device = device
 
-        with tf.device(self.device):
+        with tf.device(self.device) and tf.name_scope(name) as scope:
             # Set random seed
             tf.set_random_seed(random_seed)
 

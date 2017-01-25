@@ -126,7 +126,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
 
         # Get initial game observation
         state = local_game_state.reset()
-        
+
         while not terminal:
             # Get the Q-values of the current state
             q_values = local_network.predict(sess, [state])
@@ -233,6 +233,7 @@ game = GameState(settings.random_seed,
 
 # Set target Deep Q Network
 target_network = DeepQNetwork(-1, 
+                            'target_network',
                             device, 
                             settings.random_seed, 
                             game.action_size,
@@ -243,7 +244,9 @@ target_network = DeepQNetwork(-1,
 local_networks = []
 local_game_states = []
 for n in range(settings.parallel_agents):
+    name = 'local_network_' + str(n)
     local_network = DeepQNetwork(n, 
+                                name,
                                 device, 
                                 settings.random_seed + n, 
                                 game.action_size, 
@@ -265,7 +268,7 @@ sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
                                         allow_soft_placement=True))
 
 # Statistics summary writer
-summary_dir = './logs/asynchronous-1step-{}_game-{}_parallel-{}_global-max-{}_frame-skip{}/'.format(settings.method, 
+summary_dir = './logs/asynchronous-1step-{}_game-{}_parallel_agents-{}_global-max-{}_frame-skip{}/'.format(settings.method, 
     settings.game, settings.parallel_agents, settings.global_max_steps, settings.frame_skip)
 summary_writer = tf.summary.FileWriter(summary_dir, sess.graph)
 stats = Stats(sess, summary_writer)
