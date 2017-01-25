@@ -34,6 +34,7 @@ flags.DEFINE_integer('epsilon_anneal', 400000, 'Number of steps to anneal epsilo
 # Optimizer settings
 flags.DEFINE_float('learning_rate', 0.0001, 'Initial learning rate.')
 flags.DEFINE_string('optimizer', 'rmsprop', 'If another optimizer should be used [adam, gradientdescent, rmsprop]. Defaults to gradient descent.')
+flags.DEFINE_float('rms_decay', '0.99', 'RMSProp decay parameter.')
 
 # Testing settings
 flags.DEFINE_boolean('evaluate_model', False, 'It model should run through OpenAIs Gym evaluation.')
@@ -238,7 +239,8 @@ target_network = DeepQNetwork(-1,
                             settings.random_seed, 
                             game.action_size,
                             settings.learning_rate, 
-                            settings.optimizer)
+                            settings.optimizer,
+                            settings.rms_decay)
 
 # Prepare local networks and game enviroments
 local_networks = []
@@ -251,7 +253,8 @@ for n in range(settings.parallel_agents):
                                 settings.random_seed + n, 
                                 game.action_size, 
                                 settings.learning_rate, 
-                                settings.optimizer)
+                                settings.optimizer,
+                                settings.rms_decay)
 
     local_game_state = GameState(settings.random_seed + n, 
                                 settings.log, 
