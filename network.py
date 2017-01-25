@@ -26,7 +26,7 @@ class DeepQNetwork(object):
       return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], 
                                 padding='VALID')
 
-    def __init__(self, index, name, device, random_seed, action_size, learning_rate, optimizer):
+    def __init__(self, index, name, device, random_seed, action_size, learning_rate, optimizer, rms_decay):
         self.device = device
 
         with tf.device(self.device) and tf.name_scope(name) as scope:
@@ -91,7 +91,7 @@ class DeepQNetwork(object):
                     self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.obj_function)
                 elif optimizer.lower() == 'rmsprop':
                     # RMSProp
-                    self.train_step = tf.train.RMSPropOptimizer(learning_rate).minimize(self.obj_function)
+                    self.train_step = tf.train.RMSPropOptimizer(learning_rate, decay=decay).minimize(self.obj_function)
                 else: 
                     # Gradient Descent
                     self.train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(self.obj_function)
