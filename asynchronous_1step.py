@@ -44,31 +44,6 @@ flags.DEFINE_float('test_epsilon', 0.0, 'Epsilon to use on test run.')
 
 settings = flags.FLAGS
 
-global_max_steps = settings.global_max_steps
-global_step = 0
-
-if settings.use_gpu:
-    device = '/gpu:0'
-else:
-    device = '/cpu:0'
-
-
-# Start game environment to get action_size
-game = GameState(settings.random_seed, 
-                settings.log, 
-                settings.game, 
-                settings.frame_skip, 
-                settings.display, 
-                settings.no_op_max)
-
-# Set target Deep Q Network
-target_network = DeepQNetwork(-1, 
-                            device, 
-                            settings.random_seed, 
-                            game.action_size,
-                            settings.learning_rate, 
-                            settings.optimizer)
-
 '''
 Sample final epsilon as paper by Mnih et. al. 2016.
 '''
@@ -104,25 +79,29 @@ def onehot_vector(action, action_size):
     vector[action] = 1
     return vector
 
+'''
+Return empty arrays to reset gradients.
+'''
+def reset_gradient_arrays():
+    return [], [], []
 
-def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_op, score_input):
-    global global_max_steps, global_step, target_network
+'''
+Return empty arrays to reset stats.
+'''
+def reset_stat_arrays():
+    return [], [], [], [], []
 
-    # Load local game enviroments
-    local_game_state = GameState(settings.random_seed + thread_index, 
-                                settings.log, 
-                                settings.game, 
-                                settings.frame_skip, 
-                                settings.display, 
-                                settings.no_op_max)
-    
-    # Create local network
-    local_network = DeepQNetwork(thread_index, 
-                                device, 
-                                settings.random_seed + thread_index, 
-                                local_game_state.action_size, 
-                                settings.learning_rate, 
-                                settings.optimizer)
+'''
+Vertically stack batches to match network structure
+'''
+def stack_batches(state_batch, action_batch, y_batch):
+    return np.vstack(state_batch), np.vstack(action_batch), np.vstack(y_batch)
+
+'''
+Worker thread that runs an agent training in a local game enviroment with its own local network.
+'''
+def worker_thread(thread_index, local_network, local_game_state): #sess, summary_writer, summary_op, score_input):
+    global global_max_steps, global_step, target_network, sess, stats
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
@@ -132,24 +111,17 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
     print("Starting agent " + str(thread_index) + " with final epsilon: " + str(final_epsilon))
 
     # Prepare gradiets
-    y_batch = []
-    state_batch = []
-    action_batch = [] 
+    y_batch, state_batch action_batch = reset_gradient_arrays()
 
     # Prepare stats
-    q_max_arr = []
-    reward_arr = []
-    epsilon_arr = []
-    loss_arr = []
-    acc_arr = []
+    q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
 
-    time.sleep(3*thread_index)
+    time.sleep(5*thread_index+1)
     local_step = 0
 
     while global_step < global_max_steps:
         # Reset counters and values
         local_step = 0
-        episode_reward = 0
         average_q_max = 0
         terminal = False
 
@@ -158,7 +130,7 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
 
         while not terminal:
             # Get the Q-values of the current state
-            q_values = local_network.predict([state])
+            q_values = local_network.predict(sess, [state])
 
             # Anneal epsilon and select action
             epsilon = anneal_epsilon(epsilon, final_epsilon)
@@ -168,7 +140,7 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
             new_state, reward, terminal = local_game_state.step(action)
             
             # Get the new state's Q-values
-            q_values_new = target_network.predict([new_state])
+            q_values_new = target_network.predict(sess, [new_state])
 
             if settings.method == 'sarsa':
                 # Get Q(s',a') for selected action a to update Q(s,a)
@@ -202,18 +174,15 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
                 print global_step
-                target_network.sync_from(local_network)
+                sess.run(target_network.sync_from(local_network))
 
             # Update online network on I_AsyncUpdate
             if local_step % settings.local_max_steps == 0 or terminal:
-                # Stack batches
-                state_batch = np.vstack(state_batch)
-                action_batch = np.vstack(action_batch)
-                y_batch = np.vstack(y_batch)
-
-                acc = local_network.get_accuracy(state_batch, y_batch)
-
-                loss = local_network.train(state_batch, action_batch, y_batch)
+                state_batch, action_batch, y_batch = stack_batches(state_batch, action_batch, y_batch)
+                # Measure accuracy of the network
+                acc = local_network.get_accuracy(sess, state_batch, y_batch)
+                # Train local network with gradient batches
+                loss = local_network.train(sess, state_batch, action_batch, y_batch)
 
                 # Save values for stats
                 epsilon_arr.append(epsilon)
@@ -221,12 +190,10 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
                 acc_arr.append(acc)
 
                 # Clear gradients
-                y_batch = []
-                state_batch = []
-                action_batch = []
-                
+                y_batch, state_batch action_batch = reset_gradient_arrays()
+      
             if terminal:
-                print('global_step: {}, thread: {}, episode_reward: {}, steps: {}, avg_acc: {}'.format(global_step, thread_index, episode_reward, local_step, np.average(acc_arr)))
+                print('global_step: {}, thread: {}, episode_reward: {}, steps: {}, avg_acc: {}'.format(global_step, thread_index, np.sum(reward_arr), local_step, np.average(acc_arr)))
                 stats.update({'loss': np.average(loss_arr), 
                             'accuracy': np.average(acc_arr),
                             'qmax': np.average(q_max_arr),
@@ -235,36 +202,84 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
                             'steps': local_step,
                             'step': global_step
                             }) 
+
+                # Reset stats
+                q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
+
+
             else:
                 # Update current state from s_t to s_t1
                 state = new_state
                 local_game_state.update_state()
 
-def train():
-    # Statistics summary writer
-    summary_dir = './logs/asynchronous-1step-{}_game-{}/'.format(settings.method, settings.game)
-    summary_writer = tf.summary.FileWriter(summary_dir, target_network.sess.graph)
-    stats = Stats(target_network.sess, summary_writer)
 
-    # Prepare parallel workers
-    workers = []
-    for n in range(settings.parallel_agents):
-        worker = Thread(target=worker_thread,
-                            args=(n, device, stats))
-        workers.append(worker)
+global_max_steps = settings.global_max_steps
+global_step = 0
 
-    # Start workers
-    for t in workers:
-        t.start()
-    # Join workers
-    for t in workers:
-        t.join()
+if settings.use_gpu:
+    device = '/gpu:0'
+else:
+    device = '/cpu:0'
 
-def main():
-    if settings.evaluate_model:
-        evaluate()
-    else:
-        train()
+# Start game environment to get action_size
+game = GameState(settings.random_seed, 
+                settings.log, 
+                settings.game, 
+                settings.frame_skip, 
+                settings.display, 
+                settings.no_op_max)
 
-if __name__ == '__main__':
-    main()
+# Set target Deep Q Network
+target_network = DeepQNetwork(-1, 
+                            device, 
+                            settings.random_seed, 
+                            game.action_size,
+                            settings.learning_rate, 
+                            settings.optimizer)
+
+# Prepare local networks and game enviroments
+local_networks = []
+local_game_states = []
+for n in range(settings.parallel_agents):
+    local_network = DeepQNetwork(n, 
+                                device, 
+                                settings.random_seed + n, 
+                                game.action_size, 
+                                settings.learning_rate, 
+                                settings.optimizer)
+
+    local_game_state = GameState(settings.random_seed + n, 
+                                settings.log, 
+                                settings.game, 
+                                settings.frame_skip, 
+                                settings.display, 
+                                settings.no_op_max)
+
+    local_networks.append(local_network)
+    local_game_states.append(local_game_state)
+
+
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
+                                        allow_soft_placement=True))
+
+# Statistics summary writer
+summary_dir = './logs/asynchronous-1step-{}_game-{}/'.format(settings.method, settings.game)
+summary_writer = tf.summary.FileWriter(summary_dir, sess.graph)
+stats = Stats(sess, summary_writer)
+
+init = tf.global_variables_initializer()
+sess.run(init)
+
+# Start up parallel workers
+workers = []
+for n in range(settings.parallel_agents):
+    worker = Thread(target=worker_thread,
+                        args=(n, local_networks[n], local_game_states[n]))
+    workers.append(worker)
+
+# Start workers
+for t in workers:
+    t.start()
+# Join workers
+for t in workers:
+    t.join()

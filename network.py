@@ -23,7 +23,6 @@ class DeepQNetwork(object):
                                 padding='VALID')
 
     def __init__(self, index, device, random_seed, action_size, learning_rate, optimizer):
-        self.sess = tf.InteractiveSession()
         self.device = device
 
         with tf.device(self.device):
@@ -97,14 +96,11 @@ class DeepQNetwork(object):
             with tf.name_scope('accuracy') as scope:
                 correct_prediction = tf.equal(tf.argmax(self.q_values, 1), tf.argmax(self.y, 1))
                 self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-                
-            init = tf.global_variables_initializer()
-            self.sess.run(init)
 
     '''
     Utilizes the optimizer and objectie function to train the network based on the input and desired output.
     '''
-    def train(self, s_input, a_input, desired_output):
+    def train(self, sess, s_input, a_input, desired_output):
         #print 'self.a.get_shape(): {}'.format(self.a.get_shape())
         #print 'a.input.shape: {}'.format(a_input.shape)
         #print 'self.s.get_shape(): {}'.format(self.s.get_shape())
@@ -112,7 +108,7 @@ class DeepQNetwork(object):
         #print 'self.y.get_shape(): {}'.format(self.y.get_shape())
         #print 'desired_output: {}'.format(desired_output.shape) 
         with tf.device(self.device):
-            _, loss = self.sess.run([self.train_step, self.obj_function],
+            _, loss = sess.run([self.train_step, self.obj_function],
                                     feed_dict={self.s: s_input,
                                             self.a: a_input,
                                             self.y: desired_output})
@@ -121,18 +117,18 @@ class DeepQNetwork(object):
     '''
     Feeds a value through the network and produces an output.
     '''
-    def predict(self, s_input):
+    def predict(self, sess, s_input):
         with tf.device(self.device):
-            predicted_output = self.sess.run(self.q_values, feed_dict={self.s: s_input})
+            predicted_output = sess.run(self.q_values, feed_dict={self.s: s_input})
         return predicted_output
 
     '''
     Measures the accuracy of the network based on the specified accuracy measure, the input and the desired output.
     '''
-    def get_accuracy(self, s_input, desired_output):
+    def get_accuracy(self, sess, s_input, desired_output):
         with tf.device(self.device):
-            acc = self.sess.run(self.accuracy, feed_dict={self.s: s_input, 
-                                                        self.y: desired_output})
+            acc = sess.run(self.accuracy, feed_dict={self.s: s_input, 
+                                                    self.y: desired_output})
         return acc
 
     def get_vars(self):
@@ -146,7 +142,6 @@ class DeepQNetwork(object):
         dst_vars = self.get_vars()
 
         sync_ops = []
-
         with tf.device(self.device):
           #with tf.name_scope(name, "GameACNetwork", []) as name:
             for(src_var, dst_var) in zip(src_vars, dst_vars):
