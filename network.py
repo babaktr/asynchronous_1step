@@ -1,5 +1,9 @@
 import tensorflow as tf
 
+'''
+Network structure from "Playing Atari with Deep Reinforcement Learning" by Mnih et al., 2013 
+as specified in "Asynchronous Methods for Deep Reinforcement Learning" by Mnih et al., 2016.
+'''
 class DeepQNetwork(object):
     '''
     Set up weight variable.
@@ -112,7 +116,7 @@ class DeepQNetwork(object):
                                     feed_dict={self.s: s_input,
                                             self.a: a_input,
                                             self.y: desired_output})
-        return loss
+            return loss
 
     '''
     Feeds a value through the network and produces an output.
@@ -120,7 +124,7 @@ class DeepQNetwork(object):
     def predict(self, sess, s_input):
         with tf.device(self.device):
             predicted_output = sess.run(self.q_values, feed_dict={self.s: s_input})
-        return predicted_output
+            return predicted_output
 
     '''
     Measures the accuracy of the network based on the specified accuracy measure, the input and the desired output.
@@ -129,23 +133,22 @@ class DeepQNetwork(object):
         with tf.device(self.device):
             acc = sess.run(self.accuracy, feed_dict={self.s: s_input, 
                                                     self.y: desired_output})
-        return acc
+            return acc
 
-    def get_vars(self):
+    def get_variables(self):
         return [self.W_conv1, self.b_conv1,
             self.W_conv2, self.b_conv2,
             self.W_fc1, self.b_fc1,
             self.W_fc2, self.b_fc2]
 
-    def sync_from(self, src_network, name=None):
-        src_vars = src_network.get_vars()
-        dst_vars = self.get_vars()
+    def sync_from(self, source_network):
+        source_variables = source_network.get_variables()
+        destination_variables = self.get_variables()
 
         sync_ops = []
         with tf.device(self.device):
-          #with tf.name_scope(name, "GameACNetwork", []) as name:
-            for(src_var, dst_var) in zip(src_vars, dst_vars):
-              sync_op = tf.assign(dst_var, src_var)
+            for(source_variable, destination_variable) in zip(source_variables, destination_variables):
+              sync_op = tf.assign(destination_variable, source_variable)
               sync_ops.append(sync_op)
 
-            return tf.group(*sync_ops) #name=name)
+            return tf.group(*sync_ops)
