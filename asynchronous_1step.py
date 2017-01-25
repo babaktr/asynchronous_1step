@@ -122,6 +122,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
         # Reset counters and values
         local_step = 0
         terminal = False
+        prev_action = np.random.randint(local_game_state.action_size)
 
         # Get initial game observation
         state = local_game_state.reset()
@@ -142,7 +143,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
 
             if settings.method.lower() == 'sarsa':
                 # Get Q(s',a') for selected action to update Q(s,a)
-                q_value_new = q_values_new[action]
+                q_value_new = q_values_new[prev_action]
             else:
                 # Get max(Q(s',a')) to update Q(s,a)
                 q_value_new = np.max(q_values_new)
@@ -211,6 +212,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
             else:
                 # Update current state from s_t to s_t1
                 state = new_state
+                prev_action = action
                 local_game_state.update_state()
 
 global_max_steps = settings.global_max_steps
