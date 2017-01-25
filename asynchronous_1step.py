@@ -111,7 +111,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
     print("Starting agent " + str(thread_index) + " with final epsilon: " + str(final_epsilon))
 
     # Prepare gradiets
-    y_batch, state_batch action_batch = reset_gradient_arrays()
+    y_batch, state_batch, action_batch = reset_gradient_arrays()
 
     # Prepare stats
     q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
@@ -123,7 +123,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
         # Reset counters and values
         local_step = 0
         average_q_max = 0
-        terminal = False
+        terminal = final_epsilon
 
         # Get initial game observation
         state = local_game_state.reset()
@@ -164,7 +164,6 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
             # Update counters and values
             local_step += 1
             global_step += 1
-            episode_reward += reward
             average_q_max += np.max(q_values)
 
             # Save for stats
@@ -190,7 +189,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
                 acc_arr.append(acc)
 
                 # Clear gradients
-                y_batch, state_batch action_batch = reset_gradient_arrays()
+                y_batch, state_batch, action_batch = reset_gradient_arrays()
       
             if terminal:
                 print('global_step: {}, thread: {}, episode_reward: {}, steps: {}, avg_acc: {}'.format(global_step, thread_index, np.sum(reward_arr), local_step, np.average(acc_arr)))
@@ -211,7 +210,6 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
                 # Update current state from s_t to s_t1
                 state = new_state
                 local_game_state.update_state()
-
 
 global_max_steps = settings.global_max_steps
 global_step = 0
