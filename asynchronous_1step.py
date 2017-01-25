@@ -47,7 +47,27 @@ settings = flags.FLAGS
 global_max_steps = settings.global_max_steps
 global_step = 0
 
-target_network = None
+if settings.use_gpu:
+    device = '/gpu:0'
+else:
+    device = '/cpu:0'
+
+
+# Start game environment to get action_size
+game = GameState(settings.random_seed, 
+                settings.log, 
+                settings.game, 
+                settings.frame_skip, 
+                settings.display, 
+                settings.no_op_max)
+
+# Set target Deep Q Network
+target_network = DeepQNetwork(-1, 
+                            device, 
+                            settings.random_seed, 
+                            game.action_size,
+                            settings.learning_rate, 
+                            settings.optimizer)
 
 '''
 Sample final epsilon as paper by Mnih et. al. 2016.
@@ -86,7 +106,7 @@ def onehot_vector(action, action_size):
 
 
 def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_op, score_input):
-    global global_max_steps, global_step
+    global global_max_steps, global_step, target_network
 
     # Load local game enviroments
     local_game_state = GameState(settings.random_seed + thread_index, 
@@ -140,10 +160,8 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
             # Get the Q-values of the current state
             q_values = local_network.predict([state])
 
-            # Anneal epsilon
+            # Anneal epsilon and select action
             epsilon = anneal_epsilon(epsilon, final_epsilon)
-
-            # Select action
             action = select_action(epsilon, q_values, local_game_state.action_size)
 
             # Make action an observe 
@@ -161,10 +179,13 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
 
             if not terminal: 
                 # Non-terminal state, update with reward + gamma * max(Q(s'a')
-                reward += (settings.gamma * q_value_new)
+                update = reward + (settings.gamma * q_value_new)
+            else:
+                # Terminal state, update using reward
+                update = reward
 
             # Fill batch
-            y_batch.append([reward])
+            y_batch.append([update])
             state_batch.append([state])
             action_batch.append(onehot_vector(action, local_game_state.action_size))
 
@@ -181,7 +202,6 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
                 print global_step
-                session.run(reset_target_network_params)
                 target_network.sync_from(local_network)
 
             # Update online network on I_AsyncUpdate
@@ -221,27 +241,6 @@ def worker_thread(thread_index, device, stats): #sess, summary_writer, summary_o
                 local_game_state.update_state()
 
 def train():
-    if settings.use_gpu:
-        device = '/gpu:0'
-    else:
-        device = '/cpu:0'
-
-    # Start game environment to get action_size
-    game = GameState(settings.random_seed, 
-                    settings.log, 
-                    settings.game, 
-                    settings.frame_skip, 
-                    settings.display, 
-                    settings.no_op_max)
-
-    # Set target Deep Q Network
-    target_network = DeepQNetwork(-1, 
-                                device, 
-                                settings.random_seed, 
-                                game.action_size,
-                                settings.learning_rate, 
-                                settings.optimizer)
-
     # Statistics summary writer
     summary_dir = './logs/asynchronous-1step-{}_game-{}/'.format(settings.method, settings.game)
     summary_writer = tf.summary.FileWriter(summary_dir, target_network.sess.graph)
