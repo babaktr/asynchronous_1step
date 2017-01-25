@@ -190,7 +190,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
                 y_batch, state_batch, action_batch = reset_gradient_arrays()
       
             if terminal:
-                print 'Thread: {} Global step: {}, Episode steps: {}, Reward: {}, Qmax: {}, Loss: {}, Accuracy: {}, Epsilon: {}'.format(thread_index, 
+                print 'Thread: {}, Global step: {}, Episode steps: {}, Reward: {}, Qmax: {}, Loss: {}, Accuracy: {}, Epsilon: {}'.format(thread_index, 
                     global_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'),  format(np.average(loss_arr), '.4f'), 
                     format(np.average(acc_arr), '.2f'), format(np.average(epsilon_arr), '.2f'))
 
