@@ -13,7 +13,7 @@ flags = tf.app.flags
 
 # General settings
 flags.DEFINE_string('game', 'Breakout-v0', 'Name of the atari game to play. Full list here: https://gym.openai.com/envs#atari')
-flags.DEFINE_boolean('use_gpu', False, 'If it should run on GPU rather than CPU.')
+flags.DEFINE_boolean('use_gpu', False, 'If TensorFlow operations should run on GPU rather than CPU.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 flags.DEFINE_boolean('log', False, 'If log level should be verbose.')
 

@@ -10,8 +10,8 @@ Run using ```python asynchronous_1step.py```
 ## Parameters
 
 ### General settings
-* ```game``` - ```Breakout-v0``` - Name of the atari game to play. Full list here: https://gym.openai.com/envs#atari.
-* ```use_gpu``` - ```False``` - If it should run the TensorFlow operations on GPU rather than CPU.
+* ```game``` - ```Breakout-v0``` - Name of the atari game to play. Full list [here](https://gym.openai.com/envs/).
+* ```use_gpu``` - ```False``` - If TensorFlow operations should run on GPU rather than CPU.
 * ```random_seed``` - ```123``` - Sets the random seed.
 * ```log``` - ```False``` - If log level should be verbose.
 
