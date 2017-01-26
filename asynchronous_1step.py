@@ -25,8 +25,7 @@ flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps.')
 flags.DEFINE_integer('local_max_steps', 5, 'Frequency with which each agent network is updated (I_target).')
 flags.DEFINE_integer('target_network_update', 40000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
 flags.DEFINE_integer('frame_skip', 0, 'How many frames to skip on each step.')
-# ---- Not yet used ----
-flags.DEFINE_integer('no_op_max', 0, 'Beskr noop.')
+flags.DEFINE_integer('no_op_max', 0, 'How many no-op actions to take at the beginning of each episode.')
 
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
