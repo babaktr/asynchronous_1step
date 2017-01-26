@@ -36,5 +36,5 @@ Run using ```python asynchronous_1step.py```
 #### Testing settings
 * ```evaluate_model``` - ```False``` - It model should run through OpenAIs Gym evaluation.
 * ```display``` - ```False``` - If it should display the agent.
-*```test_runs``` - ```100```- Number of times to run the evaluation.
-*```test_epsilon``` - ```0.0``` - Epsilon to use on test run.
+* ```test_runs``` - ```100```- Number of times to run the evaluation.
+* ```test_epsilon``` - ```0.0``` - Epsilon to use on test run.
