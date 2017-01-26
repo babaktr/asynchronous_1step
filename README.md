@@ -15,7 +15,7 @@ In this method, each parallel _worker_ (or _thread_) interacts with its own copy
 This method is very similar to 1-step Q-learning, with the exception of using a different target value for ```Q(s,a)```. While Q-learning uses ```r + γmaxQ(s',a'; θ')```, 1-step SARSA uses ```r + γQ(s',a'; θ')``` where ```a'``` represents the action taken in ```s```.
 
 ### Pseudocode
-```python
+```
 # Algorithm for one worker.
 # Assume global shared θ, θ', and counter global_max = 0.
 Initialize worker step counter ĺocal_step ← 0
