@@ -2,7 +2,7 @@
 
 _Work in progress_
 
-In this repo, you'll find two implementations from the paper _Asynchronous Deep Reinforcement Learning Methods_ by Mnih et., al 2016: **Asynchronous 1-step Q-learning** and **Asynchronous 1-step SARSA**.
+In this repo, you'll find two [TensorFlow](https://www.tensorflow.org) implementations from the paper [Asynchronous Deep Reinforcement Learning Methods](https://arxiv.org/abs/1602.01783) by Mnih et., al 2016: **Asynchronous 1-step Q-learning** and **Asynchronous 1-step SARSA**. By default, they run on OpenAIs [Gym enviroment](https://gym.openai.com/), but you can easily play around with other examples through minor edits in ```game_state.py```. 
 
 
 Run using ```python asynchronous_1step.py```
@@ -12,12 +12,12 @@ Run using ```python asynchronous_1step.py```
 In this method, each parallel _worker_ (or _thread_) interacts with its own copy of the enviroment. Each worker computes a gradient of the Q-learning loss at each state, which it accumulates over multiple timesteps before it applies them, making a similar effect to using minibatches. Each worker is given a different exploration rate, which add diversity of the exploration and helps to improve the robustness of the algorithm.
 
 ### Asynchonous 1-step SARSA
-This method is very similar to 1-step Q-learning, with the exception of using a different target value for ```Q(s,a)```. While Q-learning uses ```r + γmaxQ(s',a'; θ')```, 1-step SARSA uses ```r + γQ(s',a'; θ')``` where ```a'``` represents the action taken in ```s```.
+This method is very similar to 1-step Q-learning, with the exception of using a different target value for ```Q(s,a)```. While Q-learning uses ```r + ɣmaxQ(s',a'; θ')```, 1-step SARSA uses ```r + ɣQ(s',a'; θ')``` where ```a'``` represents the action taken in ```s```.
 
 ### Pseudocode
 ```
-# Algorithm for one worker.
-# Assume global shared θ, θ', and counter global_max = 0.
+// Algorithm for one worker.
+// Assume global shared θ, θ', and the counter global_max = 0.
 Initialize worker step counter ĺocal_step ← 0
 Initialize target network weights θ' ← θ
 Initialize network gradients dθ ← 0
@@ -45,7 +45,7 @@ while global_step > global_max_steps do
     end if
 ```
 
-## General settings
+#### General settings
 * ```game``` - ```Breakout-v0``` - Name of the Ätari game to play. Full list [here](https://gym.openai.com/envs/).
 * ```use_gpu``` - ```False``` - If TensorFlow operations should run on GPU rather than CPU.
 * ```random_seed``` - ```123``` - Sets the random seed.
@@ -58,7 +58,7 @@ while global_step > global_max_steps do
 * ```local_max_steps``` - ```5``` - Frequency with which each agent network is updated (I_target).
 * ```target_network_update``` - ```40 000``` - Frequency with which the shared target network is updated (I_AsyncUpdate).
 * ```frame_skip``` - ```0``` - How many frames to skip on each step.
-* ```no_op_max``` -  ```0```
+* ```no_op_max``` -  ```0``` - How many no-op actions to take at the beginning of each episode.
 
 #### Method settings
 * ```method``` - ```q``` - Training algorithm to use [q, sarsa]. Defaults to Q-learning.
@@ -67,7 +67,7 @@ while global_step > global_max_steps do
 
 #### Optimizer settings
 * ```learning_rate``` - ```0.0001``` - Initial learning rate.
-* ```optimizer``` - ```rmsprop``` - If another optimizer should be used ```[adam, gradientdescent, rmsprop]```. Defaults to RMSProp.
+* ```optimizer``` - ```rmsprop``` - If another optimizer should be used ```[adam, gradientdescent, rmsprop]```. Defaults to ```rmsprop```.
 * ```rms_decay``` - ```0.99``` - RMSProp decay parameter.
 
 #### Testing settings
