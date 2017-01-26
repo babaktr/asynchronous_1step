@@ -22,18 +22,18 @@ Initialize worker step counter ĺocal_step ← 0
 Initialize target network weights θ' ← θ
 Initialize network gradients dθ ← 0
 Get initial state s
-repeat
+while global_step > global_max_steps do
     Take action a with ε-greedy policy based on Q(s,a;θ)
-    Receive new state s' and reward r
+    Receive new state s' and reward
     for terminal s' do
-        y = r
+        y = reward
     for non-terminal s' do
         for Q-learning do
-            y = r * γmaxQ(s',a';θ')
+            y = reward * γmaxQ(s',a';θ')
         for SARSA do
-            y = r * γQ(s',a';θ')
+            y = reward * γQ(s',a';θ')
     Accumulate gradients wrt θ: dθ ← dθ + ∂(y−Q(s,a;θ)) / ∂θ
-    s = s'
+    s ← s'
     global_step ← global_step + 1 
     local_step ← local_step + 1
     if global_step % target_network_update == 0 then
@@ -43,11 +43,10 @@ repeat
         Perform asynchronous update of θ using dθ.
         Clear gradients dθ ← 0.
     end if
-    until global_step > global_max_steps
 ```
 
 ## General settings
-* ```game``` - ```Breakout-v0``` - Name of the atari game to play. Full list [here](https://gym.openai.com/envs/).
+* ```game``` - ```Breakout-v0``` - Name of the Ätari game to play. Full list [here](https://gym.openai.com/envs/).
 * ```use_gpu``` - ```False``` - If TensorFlow operations should run on GPU rather than CPU.
 * ```random_seed``` - ```123``` - Sets the random seed.
 * ```log``` - ```False``` - If log level should be verbose.
@@ -67,7 +66,7 @@ repeat
 
 #### Optimizer settings
 * ```learning_rate``` - ```0.0001``` - Initial learning rate.
-* ```optimizer``` - ```rmsprop``` - If another optimizer should be used [adam, gradientdescent, rmsprop]. Defaults to RMSProp.
+* ```optimizer``` - ```rmsprop``` - If another optimizer should be used ```[adam, gradientdescent, rmsprop]```. Defaults to RMSProp.
 * ```rms_decay``` - ```0.99``` - RMSProp decay parameter.
 
 #### Testing settings
