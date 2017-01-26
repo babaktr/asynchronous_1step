@@ -91,26 +91,22 @@ class DeepQNetwork(object):
                     self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.obj_function)
                 elif optimizer.lower() == 'rmsprop':
                     # RMSProp
-                    self.train_step = tf.train.RMSPropOptimizer(learning_rate, decay=decay).minimize(self.obj_function)
+                    self.train_step = tf.train.RMSPropOptimizer(learning_rate, decay=rms_decay).minimize(self.obj_function)
                 else: 
                     # Gradient Descent
                     self.train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(self.obj_function)
 
             # Specify how accuracy is measured
             with tf.name_scope('accuracy') as scope:
-                correct_prediction = tf.equal(tf.argmax(self.q_values, 1), tf.argmax(self.y, 1))
-                self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
+                max_q_value = tf.reduce_max(self.q_values)
+                estimated_value = tf.reduce_max(self.y)
+                higher_value = tf.reduce_max([max_q_value, estimated_value])
+                lower_value = tf.reduce_min([max_q_value, estimated_value])
+                self.accuracy = tf.div(lower_value, higher_value)
     '''
     Utilizes the optimizer and objectie function to train the network based on the input and desired output.
     '''
     def train(self, sess, s_input, a_input, desired_output):
-        #print 'self.a.get_shape(): {}'.format(self.a.get_shape())
-        #print 'a.input.shape: {}'.format(a_input.shape)
-        #print 'self.s.get_shape(): {}'.format(self.s.get_shape())
-        #print 's_input.shape: {}'.format(s_input.shape)
-        #print 'self.y.get_shape(): {}'.format(self.y.get_shape())
-        #print 'desired_output: {}'.format(desired_output.shape) 
         with tf.device(self.device):
             _, loss = sess.run([self.train_step, self.obj_function],
                                     feed_dict={self.s: s_input,

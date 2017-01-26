@@ -53,7 +53,7 @@ class GameState(object):
             self.game.render()
 
         reward = 0
-        for n in range(self.frame_skip):
+        for n in range(self.frame_skip + 1):
             x_t1_raw, r, terminal, info = self.game.step(action)
             reward += r
             if terminal:
