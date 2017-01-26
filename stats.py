@@ -18,7 +18,6 @@ class Stats(object):
 
     for tag in scalar_summary_tags:
         self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag)
-        print tag
         self.summary_ops[tag] = tf.summary.scalar(tag, self.summary_placeholders[tag])
     
     with tf.variable_scope('histogram'):
@@ -28,7 +27,6 @@ class Stats(object):
       self.histogram_ops = {}
 
     for tag in histogram_summary_tags:
-        print tag
         self.histogram_placeholders[tag] = tf.placeholder('float32', None, name=tag)
         self.histogram_ops[tag] = tf.summary.histogram(tag, self.histogram_placeholders[tag])
 
