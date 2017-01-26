@@ -39,8 +39,8 @@ class DeepQNetwork(object):
             # State input batch with shape [?, 84, 84, 4]
             self.s = tf.placeholder(tf.float32, shape=[None, 84, 84, 4], name='s-input')
 
-            # Desired Q-value batch with shape [?, 1]
-            self.y = tf.placeholder(tf.float32, shape=[None, 1], name='desired-q_value')
+            # Target Q-value batch with shape [?, 1]
+            self.y = tf.placeholder(tf.float32, shape=[None, 1], name='target-q_value')
 
             # Convolutional layer 1 weights and bias with stride=4
             # Produces 16 19x19 outputs
@@ -108,14 +108,14 @@ class DeepQNetwork(object):
                 lower_value = tf.reduce_min([max_q_value, estimated_value])
                 self.accuracy = tf.div(lower_value, higher_value)
     '''
-    Utilizes the optimizer and objectie function to train the network based on the input and desired output.
+    Utilizes the optimizer and objectie function to train the network based on the input and target output.
     '''
-    def train(self, sess, s_input, a_input, desired_output):
+    def train(self, sess, s_input, a_input, target_output):
         with tf.device(self.device):
             _, loss = sess.run([self.train_step, self.obj_function],
                                     feed_dict={self.s: s_input,
                                             self.a: a_input,
-                                            self.y: desired_output})
+                                            self.y: target_output})
             return loss
 
     '''
@@ -127,12 +127,12 @@ class DeepQNetwork(object):
             return predicted_output
 
     '''
-    Measures the accuracy of the network based on the specified accuracy measure, the input and the desired output.
+    Measures the accuracy of the network based on the specified accuracy measure, the input and the target output.
     '''
-    def get_accuracy(self, sess, s_input, desired_output):
+    def get_accuracy(self, sess, s_input, target_output):
         with tf.device(self.device):
             acc = sess.run(self.accuracy, feed_dict={self.s: s_input, 
-                                                    self.y: desired_output})
+                                                    self.y: target_output})
             return acc
 
     def get_variables(self):
