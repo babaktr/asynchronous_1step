@@ -228,9 +228,20 @@ if settings.use_gpu:
 else:
     device = '/cpu:0'
 
+# Prepare game environments
+local_game_states = []
+for n in range(settings.parallel_agents):
+    local_game_state = GameState(settings.random_seed + n, 
+                                settings.log, 
+                                settings.game, 
+                                settings.frame_skip, 
+                                settings.display, 
+                                settings.no_op_max)
+    local_game_states.append(local_game_state)
+
 # Prepare local networks and game enviroments
 local_networks = []
-local_game_states = []
+game = local_game_states[0]
 for n in range(settings.parallel_agents):
     name = 'local_network_' + str(n)
     local_network = DeepQNetwork(n, 
@@ -241,25 +252,14 @@ for n in range(settings.parallel_agents):
                                 settings.learning_rate, 
                                 settings.optimizer,
                                 settings.rms_decay)
-
-    local_game_state = GameState(settings.random_seed + n, 
-                                settings.log, 
-                                settings.game, 
-                                settings.frame_skip, 
-                                settings.display, 
-                                settings.no_op_max)
-
     local_networks.append(local_network)
-    local_game_states.append(local_game_state)
-
-game_state = local_game_states[0]
 
 # Set target Deep Q Network
 target_network = DeepQNetwork(-1, 
                             'target_network',
                             device, 
                             settings.random_seed, 
-                            game_state.action_size,
+                            game.action_size,
                             settings.learning_rate, 
                             settings.optimizer,
                             settings.rms_decay)
