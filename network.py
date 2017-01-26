@@ -133,9 +133,9 @@ class DeepQNetwork(object):
 
     def get_variables(self):
         return [self.W_conv1, self.b_conv1,
-            self.W_conv2, self.b_conv2,
-            self.W_fc1, self.b_fc1,
-            self.W_fc2, self.b_fc2]
+                self.W_conv2, self.b_conv2,
+                self.W_fc1, self.b_fc1,
+                self.W_fc2, self.b_fc2]
 
     def sync_from(self, source_network):
         source_variables = source_network.get_variables()
