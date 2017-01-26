@@ -10,12 +10,14 @@ import time
 class GameState(object):
     def __init__(self, random_seed, log, game, frame_skip, display, no_op_max):
         np.random.seed(random_seed)
-        self.display = display
+        self.log = log
         self.frame_skip = frame_skip
-        self.log = log  
+        self.display = display
+        self.no_op_max = no_op_max
 
         # Load game environment
         self.game = gym.make(game)
+        self.game.seed(random_seed)
         # Get minimal action set
         self.action_size = self.game.action_space.n
 
@@ -24,17 +26,15 @@ class GameState(object):
     '''
     def reset(self):
         x_t_raw = self.game.reset()
-        #x_t_raw = self.game.render(mode='rgb_array')
+        #x_t_raw = self.game.render(mode='rgb_array') TODO: Keep?
 
-
-        ## Make random initial actions
-        #if self.no_op_max > 0:
-        #    n_no_actions = np.random.randint(0, self.no_op_max + 1)
-        #    for _ in range(n_no_actions):
-        #        self.ale.act(0)
-
+        # Make no-op actions
+        if self.no_op_max > 0:
+            no_op_actions = np.random.randint(0, no_op_max + 1)
+            for n in range(no_op_actions):
+                x_t_raw, _, _, _ = self.game.step(0)
+    
         x_t = self.process_frame(x_t_raw)
-
         self.s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
 
         return self.s_t
@@ -44,8 +44,7 @@ class GameState(object):
     '''
     def process_frame(self, frame):
         return resize(rgb2gray(frame), (84, 84))
-        #return resize(rgb2gray(frame), (110, 84))[17:110 - 9, :]
-
+        #return resize(rgb2gray(frame), (110, 84))[17:110 - 9, :] TODO: Keep?
 
     '''
     Make action and observe enviroment return.
@@ -61,14 +60,13 @@ class GameState(object):
             if terminal:
                 break
                 
-        #x_t1_raw = self.game.render(mode='rgb_array')
+        #x_t1_raw = self.game.render(mode='rgb_array') # TODO: Keep?
         x_t1 = self.process_frame(x_t1_raw)
-        #print np.max(x_t1)
-        #print np.argmax(x_t1)
-
-        #plt.imshow(x_t1)
-        #plt.show()
-        #time.sleep(100)
+        
+        if False: # TODO: Keep?
+            plt.imshow(x_t1)
+            plt.show()
+            time.sleep(100)
 
         if self.log:
             print info
