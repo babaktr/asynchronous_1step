@@ -19,16 +19,16 @@ flags.DEFINE_boolean('log', False, 'If log level should be verbose.')
 
 # Training settings
 flags.DEFINE_integer('parallel_agents', 8, 'Number of asynchronous agents (threads) to train with.')
-flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps')
+flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps.')
 flags.DEFINE_integer('local_max_steps', 5, 'Frequency with which each agent network is updated (I_target).')
-flags.DEFINE_integer('target_network_update', 40000, 'Frequency with which the shared target network is updated (I_AsyncUpdate)')
+flags.DEFINE_integer('target_network_update', 40000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
+flags.DEFINE_integer('frame_skip', 0, 'How many frames to skip on each step.')
 # ---- Not yet used ----
-flags.DEFINE_integer('frame_skip', 0, 'Beskr frame skip.')
 flags.DEFINE_integer('no_op_max', 0, 'Beskr noop.')
 
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
-flags.DEFINE_float('gamma', 0.99, 'Discount factor for rewards')
+flags.DEFINE_float('gamma', 0.99, 'Discount factor for rewards.')
 flags.DEFINE_integer('epsilon_anneal', 400000, 'Number of steps to anneal epsilon.')
 
 # Optimizer settings

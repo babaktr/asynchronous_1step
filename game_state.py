@@ -58,6 +58,7 @@ class GameState(object):
             reward += r
             if terminal:
                 break
+                
         #x_t1_raw = self.game.render(mode='rgb_array')
         x_t1 = self.process_frame(x_t1_raw)
 
