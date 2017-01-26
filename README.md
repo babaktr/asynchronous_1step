@@ -29,9 +29,9 @@ while global_step > global_max_steps do
         y = reward
     for non-terminal s' do
         for Q-learning do
-            y = reward * γmaxQ(s',a';θ')
+            y = reward * ɣmaxQ(s',a';θ')
         for SARSA do
-            y = reward * γQ(s',a';θ')
+            y = reward * ɣQ(s',a';θ')
     Accumulate gradients wrt θ: dθ ← dθ + ∂(y−Q(s,a;θ)) / ∂θ
     s ← s'
     global_step ← global_step + 1 
@@ -46,11 +46,11 @@ while global_step > global_max_steps do
 ```
 
 #### General settings
-* ```game``` - ```Breakout-v0``` - Name of the Ätari game to play. Full list [here](https://gym.openai.com/envs/).
+* ```game``` - ```Breakout-v0``` - Name of the Atari game to play. Full list [here](https://gym.openai.com/envs/).
 * ```use_gpu``` - ```False``` - If TensorFlow operations should run on GPU rather than CPU.
-* ```random_seed``` - ```123``` - Sets the random seed.
-* ```log``` - ```False``` - If log level should be verbose.
 * ```average_summary```- ```20``` - How many episodes to average histogram summary over.
+* ```log``` - ```False``` - If log level should be verbose.
+* ```random_seed``` - ```123``` - Sets the random seed.
 
 #### Training settings
 * ```parallel_agents``` - ```8``` - Number of asynchronous agents (threads) to train with.
@@ -66,11 +66,12 @@ while global_step > global_max_steps do
 * ```epsilon_anneal``` - ```4 000 000``` - Number of steps to anneal epsilon.
 
 #### Optimizer settings
-* ```learning_rate``` - ```0.0001``` - Initial learning rate.
-* ```optimizer``` - ```rmsprop``` - If another optimizer should be used ```[adam, gradientdescent, rmsprop]```. Defaults to ```rmsprop```.
+* ```optimizer``` - ```rmsprop``` - Which optimizer to use ```[adam, gradientdescent, rmsprop]```. Defaults to ```rmsprop```.
 * ```rms_decay``` - ```0.99``` - RMSProp decay parameter.
+* ```learning_rate``` - ```0.0001``` - Initial learning rate.
 
 #### Testing settings
+**Not yet used**
 * ```evaluate_model``` - ```False``` - It model should run through OpenAIs Gym evaluation.
 * ```display``` - ```False``` - If it should display the agent.
 * ```test_runs``` - ```100```- Number of times to run the evaluation.

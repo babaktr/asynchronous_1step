@@ -12,12 +12,11 @@ import time
 flags = tf.app.flags
 
 # General settings
-flags.DEFINE_string('game', 'Breakout-v0', 'Name of the atari game to play. Full list here: https://gym.openai.com/envs#atari')
+flags.DEFINE_string('game', 'Breakout-v0', 'Name of the Atari game to play. Full list: https://gym.openai.com/envs/')
 flags.DEFINE_boolean('use_gpu', False, 'If it should run on GPU rather than CPU.')
-flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
-flags.DEFINE_boolean('log', False, 'If log level should be verbose.')
 flags.DEFINE_integer('histogram_summary', 20, 'How many episodes to plot histogram summary over.')
-
+flags.DEFINE_boolean('log', False, 'If log level should be verbose.')
+flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 
 # Training settings
 flags.DEFINE_integer('parallel_agents', 8, 'Number of asynchronous agents (threads) to train with.')
@@ -33,9 +32,9 @@ flags.DEFINE_float('gamma', 0.99, 'Discount factor for rewards.')
 flags.DEFINE_integer('epsilon_anneal', 400000, 'Number of steps to anneal epsilon.')
 
 # Optimizer settings
-flags.DEFINE_float('learning_rate', 0.0001, 'Initial learning rate.')
-flags.DEFINE_string('optimizer', 'rmsprop', 'If another optimizer should be used [adam, gradientdescent, rmsprop]. Defaults to gradient descent.')
+flags.DEFINE_string('optimizer', 'rmsprop', 'Which optimizer to use [adam, gradientdescent, rmsprop]. Defaults to rmsprop.')
 flags.DEFINE_float('rms_decay', '0.99', 'RMSProp decay parameter.')
+flags.DEFINE_float('learning_rate', 0.0001, 'Initial learning rate.')
 
 # Testing settings
 # ---- Not yet used ----
@@ -124,7 +123,6 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
         # Reset counters and values
         local_step = 0
         terminal = False
-        prev_action = np.random.randint(local_game_state.action_size)
 
         # Get initial game observation
         state = local_game_state.reset()
@@ -136,6 +134,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
             # Anneal epsilon and select action
             epsilon = anneal_epsilon(epsilon, final_epsilon)
             action = select_action(epsilon, q_values, local_game_state.action_size)
+            action = np.argmax(q_values)
 
             # Make action an observe 
             new_state, reward, terminal = local_game_state.step(action)
@@ -145,14 +144,14 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
 
             if settings.method.lower() == 'sarsa':
                 # Get Q(s',a') for selected action to update Q(s,a)
-                q_value_new = q_values_new[prev_action]
+                q_value_new = q_values_new[action]
             else:
                 # Get max(Q(s',a')) to update Q(s,a)
                 q_value_new = np.max(q_values_new)
 
             if not terminal: 
                 # Q-learning: update with reward + gamma * max(Q(s',a')
-                # SARSA: update with reward + gamma * Q(s',a') for the selected action
+                # SARSA: update with reward + gamma * Q(s',a') for the action taken in s'
                 update = reward + (settings.gamma * q_value_new)
             else:
                 # Terminal state, update using reward
@@ -216,7 +215,6 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
             else:
                 # Update current state from s_t to s_t1
                 state = new_state
-                prev_action = action
                 local_game_state.update_state()
 
 global_max_steps = settings.global_max_steps
