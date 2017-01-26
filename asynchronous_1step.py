@@ -13,7 +13,7 @@ flags = tf.app.flags
 
 # General settings
 flags.DEFINE_string('game', 'Breakout-v0', 'Name of the atari game to play. Full list here: https://gym.openai.com/envs#atari')
-flags.DEFINE_boolean('use_gpu', False, 'If TensorFlow operations should run on GPU rather than CPU.')
+flags.DEFINE_boolean('use_gpu', False, 'If it should run on GPU rather than CPU.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 flags.DEFINE_boolean('log', False, 'If log level should be verbose.')
 
@@ -37,9 +37,9 @@ flags.DEFINE_string('optimizer', 'rmsprop', 'If another optimizer should be used
 flags.DEFINE_float('rms_decay', '0.99', 'RMSProp decay parameter.')
 
 # Testing settings
+# ---- Not yet used ----
 flags.DEFINE_boolean('evaluate_model', False, 'It model should run through OpenAIs Gym evaluation.')
 flags.DEFINE_boolean('display', False, 'If it should display the agent.')
-
 flags.DEFINE_integer('test_runs', 100, 'Number of times to run the evaluation.')
 flags.DEFINE_float('test_epsilon', 0.0, 'Epsilon to use on test run.')
 
