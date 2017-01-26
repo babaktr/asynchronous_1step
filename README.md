@@ -50,6 +50,7 @@ while global_step > global_max_steps do
 * ```use_gpu``` - ```False``` - If TensorFlow operations should run on GPU rather than CPU.
 * ```random_seed``` - ```123``` - Sets the random seed.
 * ```log``` - ```False``` - If log level should be verbose.
+* ```average_summary```- ```20``` - How many episodes to average histogram summary over.
 
 #### Training settings
 * ```parallel_agents``` - ```8``` - Number of asynchronous agents (threads) to train with.
@@ -57,7 +58,7 @@ while global_step > global_max_steps do
 * ```local_max_steps``` - ```5``` - Frequency with which each agent network is updated (I_target).
 * ```target_network_update``` - ```40 000``` - Frequency with which the shared target network is updated (I_AsyncUpdate).
 * ```frame_skip``` - ```0``` - How many frames to skip on each step.
-* ```no_op_max``` -  ```0``` - 
+* ```no_op_max``` -  ```0```
 
 #### Method settings
 * ```method``` - ```q``` - Training algorithm to use [q, sarsa]. Defaults to Q-learning.

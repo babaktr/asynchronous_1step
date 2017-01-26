@@ -63,12 +63,12 @@ class GameState(object):
                 
         #x_t1_raw = self.game.render(mode='rgb_array')
         x_t1 = self.process_frame(x_t1_raw)
-        print np.max(x_t1)
-        print np.argmax(x_t1)
+        #print np.max(x_t1)
+        #print np.argmax(x_t1)
 
-        plt.imshow(x_t1)
-        plt.show()
-        time.sleep(100)
+        #plt.imshow(x_t1)
+        #plt.show()
+        #time.sleep(100)
 
         if self.log:
             print info

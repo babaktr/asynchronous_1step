@@ -16,6 +16,8 @@ flags.DEFINE_string('game', 'Breakout-v0', 'Name of the atari game to play. Full
 flags.DEFINE_boolean('use_gpu', False, 'If it should run on GPU rather than CPU.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 flags.DEFINE_boolean('log', False, 'If log level should be verbose.')
+flags.DEFINE_integer('histogram_summary', 20, 'How many episodes to plot histogram summary over.')
+
 
 # Training settings
 flags.DEFINE_integer('parallel_agents', 8, 'Number of asynchronous agents (threads) to train with.')
@@ -90,7 +92,7 @@ def reset_gradient_arrays():
 Return empty arrays to reset stats.
 '''
 def reset_stat_arrays():
-    return [], [], [], [], []
+    return [], [], [], [], [], []
 
 '''
 Vertically stack batches to match network structure
@@ -109,15 +111,15 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
     initial_epsilon = 1.0
     epsilon = 1.0
 
-    print("Starting agent " + str(thread_index) + " with final epsilon: " + str(final_epsilon))
-
     # Prepare gradiets
     y_batch, state_batch, action_batch = reset_gradient_arrays()
 
     # Prepare stats
-    q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
+    action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
 
-    time.sleep(3*thread_index)
+    time.sleep(1*thread_index)
+    print("Starting agent " + str(thread_index) + " with final epsilon: " + str(final_epsilon))
+
     local_step = 0
     while global_step < global_max_steps:
         # Reset counters and values
@@ -169,6 +171,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
             # Save for stats
             reward_arr.append(reward)
             q_max_arr.append(np.max(q_values))
+            action_arr.append(action)
 
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
@@ -201,13 +204,14 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
                             'accuracy': np.average(acc_arr),
                             'qmax': np.average(q_max_arr),
                             'epsilon': np.average(epsilon_arr),
+                            'episode_actions': action_arr,
                             'reward': np.sum(reward_arr),
                             'steps': local_step,
                             'step': global_step
                             }) 
 
                 # Reset stats
-                q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
+                action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
 
 
             else:
@@ -223,24 +227,6 @@ if settings.use_gpu:
     device = '/gpu:0'
 else:
     device = '/cpu:0'
-
-# Start game environment to get action_size
-game = GameState(settings.random_seed, 
-                settings.log, 
-                settings.game, 
-                settings.frame_skip, 
-                settings.display, 
-                settings.no_op_max)
-
-# Set target Deep Q Network
-target_network = DeepQNetwork(-1, 
-                            'target_network',
-                            device, 
-                            settings.random_seed, 
-                            game.action_size,
-                            settings.learning_rate, 
-                            settings.optimizer,
-                            settings.rms_decay)
 
 # Prepare local networks and game enviroments
 local_networks = []
@@ -266,6 +252,17 @@ for n in range(settings.parallel_agents):
     local_networks.append(local_network)
     local_game_states.append(local_game_state)
 
+game_state = local_game_states[0]
+
+# Set target Deep Q Network
+target_network = DeepQNetwork(-1, 
+                            'target_network',
+                            device, 
+                            settings.random_seed, 
+                            game_state.action_size,
+                            settings.learning_rate, 
+                            settings.optimizer,
+                            settings.rms_decay)
 
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
                                         allow_soft_placement=True))
@@ -274,7 +271,7 @@ sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
 summary_dir = './logs/asynchronous-1step-{}_game-{}_parallel_agents-{}_global-max-{}_frame-skip{}/'.format(settings.method, 
     settings.game, settings.parallel_agents, settings.global_max_steps, settings.frame_skip)
 summary_writer = tf.summary.FileWriter(summary_dir, sess.graph)
-stats = Stats(sess, summary_writer)
+stats = Stats(sess, summary_writer, settings.histogram_summary)
 
 init = tf.global_variables_initializer()
 sess.run(init)
