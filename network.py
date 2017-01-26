@@ -44,41 +44,45 @@ class DeepQNetwork(object):
 
             # Convolutional layer 1 weights and bias with stride=4
             # Produces 16 19x19 outputs
-            self.W_conv1 = self.weight_variable([8, 8, 4, 16], 'w_conv1')
-            self.b_conv1 = self.bias_variable([16], 'bias-1')
-            stride_1 = 4
-
-            # Convolutional layer 1 output
             with tf.name_scope('conv-1') as scope:
-                h_conv1 = tf.nn.relu(self.conv2d(self.s, self.W_conv1, stride_1) + self.b_conv1)
+                self.W_conv1 = self.weight_variable([8, 8, 4, 16], 'w_conv1')
+                self.b_conv1 = self.bias_variable([16], 'bias-1')
+                stride_1 = 4
 
-            # Cconvolutional laer 2 weights and biases with stride=2
+                # Convolutional layer 1 output
+                with tf.name_scope('conv-1-out') as scope:
+                    h_conv1 = tf.nn.relu(self.conv2d(self.s, self.W_conv1, stride_1) + self.b_conv1)
+
+            # Convolutional laer 2 weights and biases with stride=2
             # Produces 32 9x9 outputs
-            self.W_conv2 = self.weight_variable([4, 4, 16, 32], name='w-conv2')
-            self.b_conv2 = self.bias_variable([32], name='b-conv2')
-            stride_2 = 2
-
-            # Convolutional layer 2 output 
             with tf.name_scope('conv-2') as scope:
-                h_conv2 = tf.nn.relu(self.conv2d(h_conv1, self.W_conv2, stride_2) + self.b_conv2)
+                self.W_conv2 = self.weight_variable([4, 4, 16, 32], name='w-conv2')
+                self.b_conv2 = self.bias_variable([32], name='b-conv2')
+                stride_2 = 2
+
+                # Convolutional layer 2 output 
+                with tf.name_scope('conv-2-out') as scope:
+                    h_conv2 = tf.nn.relu(self.conv2d(h_conv1, self.W_conv2, stride_2) + self.b_conv2)
 
             # 256 Fully connected units with weights and biases
             # Weights total 9x9x32 (2592) from the output of the 2nd convolutional layer
-            self.W_fc1 = self.weight_variable([9*9*32, 256], name='w-fc')
-            self.b_fc1 = self.bias_variable([256], name='b-fc')
+            with tf.name_scope('fully_connected') as scope:
+                self.W_fc1 = self.weight_variable([9*9*32, 256], name='w-fc')
+                self.b_fc1 = self.bias_variable([256], name='b-fc')
 
-            # Fully connected layer output
-            with tf.name_scope('fully-connected') as scope:
-                h_conv2_flat = tf.reshape(h_conv2, [-1, 9*9*32])
-                h_fc1 = tf.nn.relu(tf.matmul(h_conv2_flat, self.W_fc1) + self.b_fc1)
+                # Fully connected layer output
+                with tf.name_scope('fully-connected-out') as scope:
+                    h_conv2_flat = tf.reshape(h_conv2, [-1, 9*9*32])
+                    h_fc1 = tf.nn.relu(tf.matmul(h_conv2_flat, self.W_fc1) + self.b_fc1)
 
             # Output layer weights and biases
-            self.W_fc2 = self.weight_variable([256, action_size], name='w-out')
-            self.b_fc2 = self.bias_variable([action_size], name='b-out')
-
-            # Output
             with tf.name_scope('output') as scope:
-                self.q_values = tf.matmul(h_fc1, self.W_fc2) + self.b_fc2
+                self.W_fc2 = self.weight_variable([256, action_size], name='w-out')
+                self.b_fc2 = self.bias_variable([action_size], name='b-out')
+
+                # Output
+                with tf.name_scope('q_values') as scope:
+                    self.q_values = tf.matmul(h_fc1, self.W_fc2) + self.b_fc2
 
             # Objective function 
             with tf.name_scope('loss') as scope:
@@ -89,12 +93,12 @@ class DeepQNetwork(object):
                 if optimizer.lower() == 'adam':
                     # Adam Optimizer
                     self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.obj_function)
-                elif optimizer.lower() == 'rmsprop':
-                    # RMSProp
-                    self.train_step = tf.train.RMSPropOptimizer(learning_rate, decay=rms_decay).minimize(self.obj_function)
-                else: 
+                elif optimizer.lower() == 'gradientdecent':
                     # Gradient Descent
                     self.train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(self.obj_function)
+                else: 
+                    # RMSProp
+                    self.train_step = tf.train.RMSPropOptimizer(learning_rate, decay=rms_decay).minimize(self.obj_function)
 
             # Specify how accuracy is measured
             with tf.name_scope('accuracy') as scope:
