@@ -134,8 +134,7 @@ def worker_thread(thread_index, local_game_state):
             # Anneal epsilon and select action
             epsilon = anneal_epsilon(epsilon, final_epsilon)
             action = select_action(epsilon, q_values, local_game_state.action_size)
-            action = np.argmax(q_values)
-
+            
             # Make action an observe 
             new_state, reward, terminal = local_game_state.step(action)
             
@@ -174,7 +173,7 @@ def worker_thread(thread_index, local_game_state):
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
                 print 'Thread {} udated target network on step: {}'.format(thread_index, global_step)
-                sess.run(target_network.sync_variables_from(online_network))
+                target_network.sync_variables_from(online_network)
 
             # Update online network on I_AsyncUpdate
             if local_step % settings.local_max_steps == 0 or terminal:
