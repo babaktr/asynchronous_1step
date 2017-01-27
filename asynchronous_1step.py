@@ -99,10 +99,10 @@ def stack_batches(state_batch, action_batch, y_batch):
     return np.vstack(state_batch), np.vstack(action_batch), np.vstack(y_batch)
 
 '''
-Worker thread that runs an agent training in a local game enviroment with its own local network.
+Worker thread that runs an agent training in a local game enviroment.
 '''
-def worker_thread(thread_index, local_network, local_game_state): #sess, summary_writer, summary_op, score_input):
-    global global_max_steps, global_step, target_network, sess, stats
+def worker_thread(thread_index, local_game_state): 
+    global global_max_steps, global_step, target_network, online_network, sess, stats
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
@@ -129,7 +129,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
 
         while not terminal:
             # Get the Q-values of the current state
-            q_values = local_network.predict(sess, [state])
+            q_values = online_network.predict(sess, [state])
 
             # Anneal epsilon and select action
             epsilon = anneal_epsilon(epsilon, final_epsilon)
@@ -151,7 +151,7 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
 
             if not terminal: 
                 # Q-learning: update with reward + gamma * max(Q(s',a')
-                # SARSA: update with reward + gamma * Q(s',a') for the action taken in s'
+                # SARSA: update with reward + gamma * Q(s',a') for the action taken in s' - not yet fully  tested
                 update = reward + (settings.gamma * q_value_new)
             else:
                 # Terminal state, update using reward
@@ -173,16 +173,16 @@ def worker_thread(thread_index, local_network, local_game_state): #sess, summary
 
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
-                print 'Updated target network on step: {}'.format(global_step)
-                sess.run(target_network.sync_from(local_network))
+                print 'Thread {} udated target network on step: {}'.format(thread_index, global_step)
+                sess.run(target_network.sync_variables_from(online_network))
 
             # Update online network on I_AsyncUpdate
             if local_step % settings.local_max_steps == 0 or terminal:
                 state_batch, action_batch, y_batch = stack_batches(state_batch, action_batch, y_batch)
-                # Measure accuracy of the network
-                acc = local_network.get_accuracy(sess, state_batch, y_batch)
-                # Train local network with gradient batches
-                loss = local_network.train(sess, state_batch, action_batch, y_batch)
+                # Measure accuracy of the network given the batches
+                acc = online_network.get_accuracy(sess, state_batch, y_batch)
+                # Train online network with gradient batches
+                loss = online_network.train(sess, state_batch, action_batch, y_batch)
 
                 # Save values for stats
                 epsilon_arr.append(epsilon)
@@ -236,20 +236,16 @@ for n in range(settings.parallel_agents):
                                 settings.no_op_max)
     local_game_states.append(local_game_state)
 
-# Prepare local networks and game enviroments
-local_networks = []
+# Prepare online network
 game = local_game_states[0]
-for n in range(settings.parallel_agents):
-    name = 'local_network_' + str(n)
-    local_network = DeepQNetwork(n, 
-                                name,
-                                device, 
-                                settings.random_seed + n, 
-                                game.action_size, 
-                                settings.learning_rate, 
-                                settings.optimizer,
-                                settings.rms_decay)
-    local_networks.append(local_network)
+online_network = DeepQNetwork(n, 
+                            'online_network',
+                            device, 
+                            settings.random_seed + n, 
+                            game.action_size, 
+                            settings.learning_rate, 
+                            settings.optimizer,
+                            settings.rms_decay)
 
 # Set target Deep Q Network
 target_network = DeepQNetwork(-1, 
@@ -277,7 +273,7 @@ sess.run(init)
 workers = []
 for n in range(settings.parallel_agents):
     worker = Thread(target=worker_thread,
-                    args=(n, local_networks[n], local_game_states[n]))
+                    args=(n, local_game_states[n]))
     workers.append(worker)
 
 # Start and join workers to start training

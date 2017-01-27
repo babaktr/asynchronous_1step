@@ -136,19 +136,23 @@ class DeepQNetwork(object):
             return acc
 
     def get_variables(self):
-        return [self.W_conv1, self.b_conv1,
-                self.W_conv2, self.b_conv2,
-                self.W_fc1, self.b_fc1,
-                self.W_fc2, self.b_fc2]
+        return {'W_conv1': self.W_conv1, 
+                'b_conv1': self.b_conv1,
+                'W_conv2': self.W_conv2,
+                'b_conv2': self.b_conv2,
+                'W_fc1': self.W_fc1, 
+                'b_fc1': self.b_fc1,
+                'W_fc2': self.W_fc2, 
+                'b_fc2': self.b_fc2
+                }
 
-    def sync_from(self, source_network):
+    def sync_variables_from(self, source_network):
         source_variables = source_network.get_variables()
-        destination_variables = self.get_variables()
-
-        sync_ops = []
-        with tf.device(self.device):
-            for(source_variable, destination_variable) in zip(source_variables, destination_variables):
-              sync_op = tf.assign(destination_variable, source_variable)
-              sync_ops.append(sync_op)
-
-            return tf.group(*sync_ops)
+        self.W_conv1 = source_variables['W_conv1']
+        self.b_conv1 = source_variables['b_conv1']
+        self.W_conv2 = source_variables['W_conv2']
+        self.b_conv2 = source_variables['b_conv2']
+        self.W_fc1 = source_variables['W_fc1']
+        self.b_fc1 = source_variables['b_fc1']
+        self.W_fc2 = source_variables['W_fc2']
+        self.b_fc2 = source_variables['b_fc2']
