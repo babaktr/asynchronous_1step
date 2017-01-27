@@ -204,7 +204,7 @@ def worker_thread(thread_index, local_game_state):
 
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
-                print 'Thread {} udated target network on step: {}'.format(thread_index, global_step)
+                print 'Thread {} updated target network on step: {}'.format(thread_index, global_step)
                 target_network.sync_variables_from(online_network)
 
             # Update online network on I_AsyncUpdate
@@ -241,8 +241,6 @@ def worker_thread(thread_index, local_game_state):
 
                 # Reset stats
                 action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
-
-
             else:
                 # Update current state from s_t to s_t1
                 state = new_state
