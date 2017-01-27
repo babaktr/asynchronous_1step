@@ -8,6 +8,8 @@ from stats import Stats
 from threading import Thread
 
 import time 
+import signal
+import os
 
 flags = tf.app.flags
 
@@ -99,10 +101,40 @@ def stack_batches(state_batch, action_batch, y_batch):
     return np.vstack(state_batch), np.vstack(action_batch), np.vstack(y_batch)
 
 '''
+Handles the loading any available checkpoint.
+'''
+def load_checkpoint(sess, saver, checkpoint_path):
+    checkpoint = tf.train.get_checkpoint_state(checkpoint_path)
+    if checkpoint and checkpoint.model_checkpoint_path:
+        saver.restore(sess, checkpoint.model_checkpoint_path)
+        print 'Checkpoint loaded:', checkpoint.model_checkpoint_path
+        tokens = checkpoint.model_checkpoint_path.split("-")
+        # set global step
+        global_step = int(tokens[len(tokens)-1])
+        print 'Global step set to: ', global_step
+        # set wall time
+        wall_t_fname = checkpoint_path + '/' + 'wall_t.' + str(global_step)
+        with open(wall_t_fname, 'r') as f:
+            wall_t = float(f.read())
+    else:
+        print 'Could not find old checkpoint'
+        global_step = 0
+        wall_t = 0.0
+    return wall_t, global_step
+
+'''
+Catches the break signal input from the user.
+'''
+def signal_handler(signal, frame):
+    global stop_requested
+    print 'You pressed Ctrl+C!'
+    stop_requested = True
+
+'''
 Worker thread that runs an agent training in a local game enviroment.
 '''
 def worker_thread(thread_index, local_game_state): 
-    global global_max_steps, global_step, target_network, online_network, sess, stats
+    global stop_requested, global_step, target_network, online_network, sess, stats
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
@@ -119,7 +151,7 @@ def worker_thread(thread_index, local_game_state):
     print("Starting agent " + str(thread_index) + " with final epsilon: " + str(final_epsilon))
 
     local_step = 0
-    while global_step < global_max_steps:
+    while global_step < settings.global_max_steps and not stop_requested:
         # Reset counters and values
         local_step = 0
         terminal = False
@@ -216,8 +248,11 @@ def worker_thread(thread_index, local_game_state):
                 state = new_state
                 local_game_state.update_state()
 
-global_max_steps = settings.global_max_steps
+            if stop_requested:
+                break
+
 global_step = 0
+stop_requested = False
 
 if settings.use_gpu:
     device = '/gpu:0'
@@ -240,7 +275,7 @@ game = local_game_states[0]
 online_network = DeepQNetwork(n, 
                             'online_network',
                             device, 
-                            settings.random_seed + n, 
+                            settings.random_seed, 
                             game.action_size, 
                             settings.learning_rate, 
                             settings.optimizer,
@@ -259,14 +294,21 @@ target_network = DeepQNetwork(-1,
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
                                         allow_soft_placement=True))
 
+experiment_name = 'asynchronous-1step-{}_game-{}_global-max-{}_frame-skip{}'.format(settings.method, 
+    settings.game, settings.global_max_steps, settings.frame_skip)
+
 # Statistics summary writer
-summary_dir = './logs/asynchronous-1step-{}_game-{}_parallel_agents-{}_global-max-{}_frame-skip{}/'.format(settings.method, 
-    settings.game, settings.parallel_agents, settings.global_max_steps, settings.frame_skip)
+summary_dir = './logs/{}/'.format(experiment_name)
 summary_writer = tf.summary.FileWriter(summary_dir, sess.graph)
 stats = Stats(sess, summary_writer, settings.histogram_summary)
 
 init = tf.global_variables_initializer()
 sess.run(init)
+
+# Checkpoint handler
+checkpoint_dir = './checkpoints/{}/'.format(experiment_name)
+saver = tf.train.Saver(max_to_keep=1)
+wall_t, global_step = load_checkpoint(sess, saver, checkpoint_dir)
 
 # Prepare parallel workers
 workers = []
@@ -275,8 +317,33 @@ for n in range(settings.parallel_agents):
                     args=(n, local_game_states[n]))
     workers.append(worker)
 
-# Start and join workers to start training
+signal.signal(signal.SIGINT, signal_handler)
+
+# set start time
+start_time = time.time() - wall_t
+print 'Press Ctrl+C to stop'
+
+time.sleep(2)
 for t in workers:
     t.start()
+
+signal.pause()
+
+print 'Now saving checkpoint. Please wait'
+    
 for t in workers:
     t.join()
+
+if not os.path.exists('./checkpoints'):
+    os.mkdir('./checkpoints')  
+if not os.path.exists(checkpoint_dir):
+    os.mkdir(checkpoint_dir)  
+
+
+# write wall time
+wall_t = time.time() - start_time
+wall_t_fname = checkpoint_dir + '/' + 'wall_t.' + str(global_step)
+with open(wall_t_fname, 'w') as f:
+    f.write(str(wall_t))
+
+saver.save(sess, checkpoint_dir + '/' 'checkpoint', global_step = global_step)
