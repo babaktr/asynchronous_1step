@@ -31,7 +31,7 @@ flags.DEFINE_integer('no_op_max', 0, 'How many no-op actions to take at the begi
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
 flags.DEFINE_float('gamma', 0.99, 'Discount factor for rewards.')
-flags.DEFINE_integer('epsilon_anneal', 400000, 'Number of steps to anneal epsilon.')
+flags.DEFINE_integer('epsilon_anneal', 4000000, 'Number of steps to anneal epsilon.')
 
 # Optimizer settings
 flags.DEFINE_string('optimizer', 'rmsprop', 'Which optimizer to use [adam, gradientdescent, rmsprop]. Defaults to rmsprop.')
@@ -58,12 +58,11 @@ def sample_final_epsilon():
 '''
 Anneal epsilon value.
 '''
-def anneal_epsilon(epsilon, final_epsilon):
+def anneal_epsilon(epsilon, final_epsilon, step):
     if epsilon > final_epsilon:
-        epsilon -= (1.0 - final_epsilon) / settings.epsilon_anneal
+        return 1.0 - step * ((1.0 - final_epsilon) / settings.epsilon_anneal)
     else:
-        epsilon = final_epsilon
-    return epsilon
+        return epsilon
 
 '''
 Select action according to exploration epsilon.
@@ -164,7 +163,7 @@ def worker_thread(thread_index, local_game_state):
             q_values = online_network.predict(sess, [state])
 
             # Anneal epsilon and select action
-            epsilon = anneal_epsilon(epsilon, final_epsilon)
+            epsilon = anneal_epsilon(epsilon, final_epsilon, global_step)
             action = select_action(epsilon, q_values, local_game_state.action_size)
             
             # Make action an observe 
