@@ -1,11 +1,9 @@
 from skimage.transform import resize
 from skimage.color import rgb2gray
 import numpy as np
-import gym
-
 import matplotlib.pyplot as plt
-
 import time
+import gym
 
 class GameState(object):
     def __init__(self, random_seed, log, game, frame_skip, display, no_op_max):
@@ -19,7 +17,13 @@ class GameState(object):
         self.game = gym.make(game)
         self.game.seed(random_seed)
         # Get minimal action set
-        self.action_size = self.game.action_space.n
+        if game == 'Pong-v0' or game == 'Breakout-v0':
+            self.action_size = 3
+        else:
+            # Tip: Rather than letting it pass to this case, see which 
+            # actions the game you want to run uses to speed up the training
+            # significantly!
+            self.action_size = self.game.action_space.n
 
     '''
     Resets game environments and regenerates new internal state s_t.

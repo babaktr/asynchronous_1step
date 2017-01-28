@@ -71,14 +71,14 @@ def select_action(epsilon, q_values, action_size):
     if np.random.random() < epsilon:
         return np.argmax(q_values)
     else:
-        return np.random.randint(0, action_size)
+        return np.random.randint(0, action_size+1)
 
 '''
 Create one-hot vector from action.
 '''
 def onehot_vector(action, action_size):
     vector = np.zeros(action_size)
-    vector[action] = 1
+    vector[action-1] = 1
     return vector
 
 '''
