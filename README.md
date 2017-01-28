@@ -5,7 +5,11 @@ _Work in progress_
 In this repo, you'll find two [TensorFlow](https://www.tensorflow.org) implementations from the paper [Asynchronous Deep Reinforcement Learning Methods](https://arxiv.org/abs/1602.01783) by Mnih et., al 2016: **Asynchronous 1-step Q-learning** and **Asynchronous 1-step SARSA**. By default, they run on OpenAIs [Gym enviroment](https://gym.openai.com/), but you can easily play around with other examples through minor edits in ```game_state.py```. 
 
 
-Run using ```python asynchronous_1step.py```
+To get started, simply run ```python asynchronous_1step.py```
+
+<p align="center">
+  <img src="resources/networks.png", width="100%"/>
+</p>
 
 ## Methods
 ### Asynchronous 1-step Q-learning
