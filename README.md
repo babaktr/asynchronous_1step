@@ -16,7 +16,7 @@ To get started, simply run ```python asynchronous_1step.py```
 In this method, each parallel _worker_ (or _thread_) interacts with its own copy of the enviroment. Each worker computes a gradient of the Q-learning loss at each state, which it accumulates over multiple timesteps before it applies them, making a similar effect to using minibatches. Each worker is given a different exploration rate, which add diversity of the exploration and helps to improve the robustness of the algorithm.
 
 ### Asynchonous 1-step SARSA
-This method is very similar to 1-step Q-learning, with the exception of using a different target value for ```Q(s,a)```. While Q-learning uses ```r + ɣmaxQ(s',a'; θ')```, 1-step SARSA uses ```r + ɣQ(s',a'; θ')``` where ```a'``` represents the action taken in ```s```.
+This method is very similar to 1-step Q-learning, with the exception of using a different target value for ```Q(s,a)```. While Q-learning uses ```r + ɣmaxQ(s',a'; θ')```, 1-step SARSA uses ```r + ɣQ(s',a'; θ')``` where ```a'``` represents the action taken in ```s'```.
 
 ### Pseudocode
 ```
