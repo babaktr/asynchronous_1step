@@ -59,9 +59,8 @@ while global_step > global_max_steps do
 #### Training settings
 * ```parallel_agents``` - ```8``` - Number of asynchronous agents (threads) to train with.
 * ```global_max_steps``` - ```80 000 000``` - Maximum training steps.
-* ```local_max_steps``` - ```5``` - Frequency with which each agent network is updated (I_target).
-* ```target_network_update``` - ```10 000``` - Frequency with which the shared target network is updated (I_AsyncUpdate).
-* ```no_op_max``` -  ```0``` - How many no-op actions to take at the beginning of each episode.
+* ```local_max_steps``` - ```5``` - Frequency with which each agent network is updated (```I_target```).
+* ```target_network_update``` - ```10 000``` - Frequency with which the shared target network is updated (```I_AsyncUpdate```).
 
 #### Method settings
 * ```method``` - ```q``` - Training algorithm to use [q, sarsa]. Defaults to Q-learning.
