@@ -35,8 +35,8 @@ flags.DEFINE_integer('epsilon_anneal', 4000000, 'Number of steps to anneal epsil
 # Optimizer settings
 flags.DEFINE_string('optimizer', 'rmsprop', 'Which optimizer to use [adam, gradientdescent, rmsprop]. Defaults to rmsprop.')
 flags.DEFINE_float('rms_decay', 0.99, 'RMSProp decay parameter.')
-flags.DEFINE_float('rms_epsilon', 0.99, 'RMSProp epsilon parameter.')
-flags.DEFINE_float('learning_rate', 0.0001, 'Initial learning rate.')
+flags.DEFINE_float('rms_epsilon', 0.1, 'RMSProp epsilon parameter.')
+flags.DEFINE_float('learning_rate', 0.0007, 'Initial learning rate.')
 flags.DEFINE_boolean('anneal_learning_rate', True, 'If learning rate should be annealed over global max steps.')
 
 # Testing settings
@@ -68,7 +68,7 @@ def anneal_epsilon(epsilon, final_epsilon, step):
 '''
 Anneal learning rate.
 '''
-def anneal_learn_rate(step):
+def anneal_learning_rate(step):
     if settings.anneal_learning_rate:
         return settings.learning_rate - (step * (settings.learning_rate / settings.global_max_steps))
 
@@ -145,7 +145,6 @@ def worker_thread(thread_index, local_game_state):
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
-    initial_epsilon = 1.0
     epsilon = 1.0
 
     # Prepare gradiets
@@ -154,7 +153,7 @@ def worker_thread(thread_index, local_game_state):
     # Prepare stats
     action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
 
-    time.sleep(1*thread_index)
+    time.sleep(0.5*thread_index)
     print("Starting agent " + str(thread_index) + " with final epsilon: " + str(final_epsilon))
 
     local_step = 0
@@ -220,7 +219,7 @@ def worker_thread(thread_index, local_game_state):
                 # Measure accuracy of the network given the batches
                 acc = online_network.get_accuracy(sess, state_batch, y_batch)
                 # Train online network with gradient batches
-                learning_rate = anneal_learn_rate(global_step)
+                learning_rate = anneal_learning_rate(global_step)
                 loss = online_network.train(sess, state_batch, action_batch, y_batch, learning_rate)
 
                 # Save values for stats
