@@ -58,15 +58,15 @@ class GameState(object):
     def step(self, action):
         if self.display:
             self.game.render()
-            
+
         x_t1_raw, reward, terminal, info = self.game.step(action+self.action_shift)
         #x_t1_raw = self.game.render(mode='rgb_array') # TODO: Keep?
         x_t1 = self.process_frame(x_t1_raw)
         
         if False: # TODO: Keep?
-            plt.imshow(x_t1)
-            plt.show()
-            time.sleep(100)
+            plt.imshow(x_t1, cmap='gray')
+            plt.savefig(str(np.random.randint(0,10000)) + '.png')
+            time.sleep(10)
 
         if self.log:
             print info

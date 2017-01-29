@@ -5,6 +5,8 @@ from network import DeepQNetwork
 from game_state import GameState
 from stats import Stats
 
+import matplotlib.pyplot as plt
+
 from threading import Thread
 
 import time 
@@ -168,6 +170,7 @@ def worker_thread(thread_index, local_game_state):
         while not terminal:
             # Get the Q-values of the current state
             q_values = online_network.predict(sess, [state])
+            print 'a {}'.format(q_values)
 
             # Anneal epsilon and select action
             epsilon = anneal_epsilon(epsilon, final_epsilon, global_step)
@@ -179,6 +182,7 @@ def worker_thread(thread_index, local_game_state):
             # Get the new state's Q-values
             q_values_new = target_network.predict(sess, [new_state])
 
+            time.sleep(1)
             if settings.method.lower() == 'sarsa':
                 # Get Q(s',a') for selected action to update Q(s,a)
                 q_value_new = q_values_new[action]
@@ -211,7 +215,7 @@ def worker_thread(thread_index, local_game_state):
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
                 print 'Thread {} updated target network on step: {}'.format(thread_index, global_step)
-                target_network.sync_variables_from(online_network)
+                sess.run(target_network.sync_variables_from(online_network))
 
             # Update online network on I_AsyncUpdate
             if local_step % settings.local_max_steps == 0 or terminal:
