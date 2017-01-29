@@ -30,7 +30,7 @@ flags.DEFINE_integer('no_op_max', 0, 'How many no-op actions to take at the begi
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
 flags.DEFINE_float('gamma', 0.99, 'Discount factor for rewards.')
-flags.DEFINE_integer('epsilon_anneal', 4000000, 'Number of steps to anneal epsilon.')
+flags.DEFINE_integer('epsilon_anneal', 1000000, 'Number of steps to anneal epsilon.')
 
 # Optimizer settings
 flags.DEFINE_string('optimizer', 'rmsprop', 'Which optimizer to use [adam, gradientdescent, rmsprop]. Defaults to rmsprop.')

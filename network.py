@@ -6,10 +6,17 @@ as specified in "Asynchronous Methods for Deep Reinforcement Learning" by Mnih e
 '''
 class DeepQNetwork(object):
     '''
+    Set up convolutional weight variable.
+    '''
+    def conv_weight_variable(self, shape, name):
+      initializer = tf.contrib.layers.xavier_initializer_conv2d()
+      return tf.Variable(initializer(shape=shape), name=name)
+
+    '''
     Set up weight variable.
     '''
     def weight_variable(self, shape, name):
-      initial = tf.truncated_normal(shape, stddev=0.1)
+      initial = tf.random_normal(shape, stddev=0.1)
       return tf.Variable(initial, name=name)
 
     '''
@@ -45,7 +52,7 @@ class DeepQNetwork(object):
             # Convolutional layer 1 weights and bias with stride=4
             # Produces 16 19x19 outputs
             with tf.name_scope('conv-1') as scope:
-                self.W_conv1 = self.weight_variable([8, 8, 4, 16], 'w_conv1')
+                self.W_conv1 = self.conv_weight_variable([8, 8, 4, 16], 'w_conv1')
                 self.b_conv1 = self.bias_variable([16], 'bias-1')
                 stride_1 = 4
 
@@ -56,7 +63,7 @@ class DeepQNetwork(object):
             # Convolutional laer 2 weights and biases with stride=2
             # Produces 32 9x9 outputs
             with tf.name_scope('conv-2') as scope:
-                self.W_conv2 = self.weight_variable([4, 4, 16, 32], name='w-conv2')
+                self.W_conv2 = self.conv_weight_variable([4, 4, 16, 32], name='w-conv2')
                 self.b_conv2 = self.bias_variable([32], name='b-conv2')
                 stride_2 = 2
 
