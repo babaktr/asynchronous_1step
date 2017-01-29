@@ -68,17 +68,17 @@ def anneal_epsilon(epsilon, final_epsilon, step):
 Select action according to exploration epsilon.
 '''
 def select_action(epsilon, q_values, action_size):
-    if np.random.random() < epsilon:
+    if np.random.random() > epsilon:
         return np.argmax(q_values)
     else:
-        return np.random.randint(0, action_size+1)
+        return np.random.randint(0, action_size)
 
 '''
 Create one-hot vector from action.
 '''
 def onehot_vector(action, action_size):
     vector = np.zeros(action_size)
-    vector[action-1] = 1
+    vector[action] = 1
     return vector
 
 '''
@@ -223,9 +223,8 @@ def worker_thread(thread_index, local_game_state):
                 y_batch, state_batch, action_batch = reset_gradient_arrays()
       
             if terminal:
-                print 'Thread: {}, Global step: {}, Episode steps: {}, Reward: {}, Qmax: {}, Loss: {}, Accuracy: {}, Epsilon: {}'.format(thread_index, 
-                    global_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'),  format(np.average(loss_arr), '.4f'), 
-                    format(np.average(acc_arr), '.3f'), format(np.average(epsilon_arr), '.2f'))
+                print 'Thread: {}  /  Global step: {}  /  Local steps: {}  /  Reward: {}  /  Qmax: {}  /  Epsilon: {}'.format(str(thread_index).zfill(2), 
+                    global_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'), format(np.average(epsilon_arr), '.2f'))
 
                 # Update stats
                 stats.update({'loss': np.average(loss_arr), 

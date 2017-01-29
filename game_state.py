@@ -19,11 +19,14 @@ class GameState(object):
         # Get minimal action set
         if game == 'Pong-v0' or game == 'Breakout-v0':
             self.action_size = 3
+            # Shift action space from [0,1,2] --> [1,2,3]
+            self.action_shift = 1
         else:
             # Tip: Rather than letting it pass to this case, see which 
             # actions the game you want to run uses to speed up the training
             # significantly!
             self.action_size = self.game.action_space.n
+            seflf.action_shift = 0
 
     '''
     Resets game environments and regenerates new internal state s_t.
@@ -59,7 +62,7 @@ class GameState(object):
 
         reward = 0
         for n in range(self.frame_skip + 1):
-            x_t1_raw, r, terminal, info = self.game.step(action)
+            x_t1_raw, r, terminal, info = self.game.step(action+self.action_shift)
             reward += r
             if terminal:
                 break
