@@ -170,7 +170,6 @@ def worker_thread(thread_index, local_game_state):
         while not terminal:
             # Get the Q-values of the current state
             q_values = online_network.predict(sess, [state])
-            print 'a {}'.format(q_values)
 
             # Anneal epsilon and select action
             epsilon = anneal_epsilon(epsilon, final_epsilon, global_step)
@@ -182,7 +181,6 @@ def worker_thread(thread_index, local_game_state):
             # Get the new state's Q-values
             q_values_new = target_network.predict(sess, [new_state])
 
-            time.sleep(1)
             if settings.method.lower() == 'sarsa':
                 # Get Q(s',a') for selected action to update Q(s,a)
                 q_value_new = q_values_new[action]
