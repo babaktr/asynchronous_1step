@@ -6,7 +6,7 @@ import time
 import gym
 
 class GameState(object):
-    def __init__(self, random_seed, log, game, display, no_op_max):
+    def __init__(self, random_seed, log, game, display):
         np.random.seed(random_seed)
         self.log = log
         self.display = display
@@ -32,13 +32,6 @@ class GameState(object):
     '''
     def reset(self):
         x_t_raw = self.game.reset()
-        #x_t_raw = self.game.render(mode='rgb_array') TODO: Keep?
-
-        # Make no-op actions
-        if self.no_op_max > 0:
-            no_op_actions = np.random.randint(0, no_op_max + 1)
-            for n in range(no_op_actions):
-                x_t_raw, _, _, _ = self.game.step(0)
     
         x_t = self.process_frame(x_t_raw)
         self.s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
@@ -50,7 +43,6 @@ class GameState(object):
     '''
     def process_frame(self, frame):
         return resize(rgb2gray(frame), (84, 84))
-        #return resize(rgb2gray(frame), (110, 84))[17:110 - 9, :] TODO: Keep?
 
     '''
     Make action and observe enviroment return.

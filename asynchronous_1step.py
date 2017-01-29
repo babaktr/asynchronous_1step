@@ -25,7 +25,6 @@ flags.DEFINE_integer('parallel_agents', 8, 'Number of asynchronous agents (threa
 flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps.')
 flags.DEFINE_integer('local_max_steps', 5, 'Frequency with which each agent network is updated (I_target).')
 flags.DEFINE_integer('target_network_update', 10000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
-flags.DEFINE_integer('no_op_max', 0, 'How many no-op actions to take at the beginning of each episode.')
 
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
@@ -258,8 +257,7 @@ for n in range(settings.parallel_agents):
     local_game_state = GameState(settings.random_seed + n, 
                                 settings.log, 
                                 settings.game, 
-                                settings.display, 
-                                settings.no_op_max)
+                                settings.display)
     local_game_states.append(local_game_state)
 
 # Prepare online network
