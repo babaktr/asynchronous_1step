@@ -11,7 +11,7 @@ class Stats(object):
     self.writer = summary_writer
 
     with tf.variable_scope('summary'):
-      scalar_summary_tags = ['network/loss', 'network/accuracy', 'episode/avg_q_max', 'episode/epsilon', 'episode/reward', 'episode/steps']
+      scalar_summary_tags = ['network/loss', 'network/accuracy', 'network/learning_rate', 'episode/avg_q_max', 'episode/epsilon', 'episode/reward', 'episode/steps']
 
       self.summary_placeholders = {}
       self.summary_ops = {}
@@ -46,6 +46,7 @@ class Stats(object):
     self.inject_summary({
           'network/loss': dictionary['loss'],
           'network/accuracy': dictionary['accuracy'],
+          'network/learning_rate': dictionary['learning_rate'],
           'episode/avg_q_max': dictionary['qmax'],
           'episode/epsilon': dictionary['epsilon'],
           'episode/reward': dictionary['reward'],

@@ -6,10 +6,9 @@ import time
 import gym
 
 class GameState(object):
-    def __init__(self, random_seed, log, game, frame_skip, display, no_op_max):
+    def __init__(self, random_seed, log, game, display, no_op_max):
         np.random.seed(random_seed)
         self.log = log
-        self.frame_skip = frame_skip
         self.display = display
         self.no_op_max = no_op_max
 
@@ -59,14 +58,8 @@ class GameState(object):
     def step(self, action):
         if self.display:
             self.game.render()
-
-        reward = 0
-        for n in range(self.frame_skip + 1):
-            x_t1_raw, r, terminal, info = self.game.step(action+self.action_shift)
-            reward += r
-            if terminal:
-                break
-                
+            
+        x_t1_raw, reward, terminal, info = self.game.step(action+self.action_shift)
         #x_t1_raw = self.game.render(mode='rgb_array') # TODO: Keep?
         x_t1 = self.process_frame(x_t1_raw)
         

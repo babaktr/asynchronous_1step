@@ -24,8 +24,7 @@ flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 flags.DEFINE_integer('parallel_agents', 8, 'Number of asynchronous agents (threads) to train with.')
 flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps.')
 flags.DEFINE_integer('local_max_steps', 5, 'Frequency with which each agent network is updated (I_target).')
-flags.DEFINE_integer('target_network_update', 40000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
-flags.DEFINE_integer('frame_skip', 0, 'How many frames to skip on each step.')
+flags.DEFINE_integer('target_network_update', 10000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
 flags.DEFINE_integer('no_op_max', 0, 'How many no-op actions to take at the beginning of each episode.')
 
 # Method settings
@@ -35,8 +34,10 @@ flags.DEFINE_integer('epsilon_anneal', 4000000, 'Number of steps to anneal epsil
 
 # Optimizer settings
 flags.DEFINE_string('optimizer', 'rmsprop', 'Which optimizer to use [adam, gradientdescent, rmsprop]. Defaults to rmsprop.')
-flags.DEFINE_float('rms_decay', '0.99', 'RMSProp decay parameter.')
+flags.DEFINE_float('rms_decay', 0.99, 'RMSProp decay parameter.')
+flags.DEFINE_float('rms_epsilon', 0.99, 'RMSProp epsilon parameter.')
 flags.DEFINE_float('learning_rate', 0.0001, 'Initial learning rate.')
+flags.DEFINE_boolean('anneal_learning_rate', True, 'If learning rate should be annealed over global max steps.')
 
 # Testing settings
 # ---- Not yet used ----
@@ -63,6 +64,13 @@ def anneal_epsilon(epsilon, final_epsilon, step):
         return 1.0 - step * ((1.0 - final_epsilon) / settings.epsilon_anneal)
     else:
         return epsilon
+
+'''
+Anneal learning rate.
+'''
+def anneal_learn_rate(step):
+    if settings.anneal_learning_rate:
+        return settings.learning_rate - (step * (settings.learning_rate / settings.global_max_steps))
 
 '''
 Select action according to exploration epsilon.
@@ -212,7 +220,8 @@ def worker_thread(thread_index, local_game_state):
                 # Measure accuracy of the network given the batches
                 acc = online_network.get_accuracy(sess, state_batch, y_batch)
                 # Train online network with gradient batches
-                loss = online_network.train(sess, state_batch, action_batch, y_batch)
+                learning_rate = anneal_learn_rate(global_step)
+                loss = online_network.train(sess, state_batch, action_batch, y_batch, learning_rate)
 
                 # Save values for stats
                 epsilon_arr.append(epsilon)
@@ -229,6 +238,7 @@ def worker_thread(thread_index, local_game_state):
                 # Update stats
                 stats.update({'loss': np.average(loss_arr), 
                             'accuracy': np.average(acc_arr),
+                            'learning_rate': learning_rate,
                             'qmax': np.average(q_max_arr),
                             'epsilon': np.average(epsilon_arr),
                             'episode_actions': action_arr,
@@ -261,7 +271,6 @@ for n in range(settings.parallel_agents):
     local_game_state = GameState(settings.random_seed + n, 
                                 settings.log, 
                                 settings.game, 
-                                settings.frame_skip, 
                                 settings.display, 
                                 settings.no_op_max)
     local_game_states.append(local_game_state)
@@ -275,7 +284,8 @@ online_network = DeepQNetwork(n,
                             game.action_size, 
                             settings.learning_rate, 
                             settings.optimizer,
-                            settings.rms_decay)
+                            settings.rms_decay,
+                            settings.rms_epsilon)
 
 # Set target Deep Q Network
 target_network = DeepQNetwork(-1, 
@@ -285,13 +295,14 @@ target_network = DeepQNetwork(-1,
                             game.action_size,
                             settings.learning_rate, 
                             settings.optimizer,
-                            settings.rms_decay)
+                            settings.rms_decay,
+                            settings.rms_epsilon)
 
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
                                         allow_soft_placement=True))
 
-experiment_name = 'asynchronous-1step-{}_game-{}_global-max-{}_frame-skip{}'.format(settings.method, 
-    settings.game, settings.global_max_steps, settings.frame_skip)
+experiment_name = 'asynchronous-1step-{}_game-{}_global-max-{}'.format(settings.method, 
+    settings.game, settings.global_max_steps)
 
 # Statistics summary writer
 summary_dir = './logs/{}/'.format(experiment_name)

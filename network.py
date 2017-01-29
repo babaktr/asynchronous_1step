@@ -26,7 +26,7 @@ class DeepQNetwork(object):
       return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], 
                                 padding='VALID')
 
-    def __init__(self, index, name, device, random_seed, action_size, learning_rate, optimizer, rms_decay):
+    def __init__(self, index, name, device, random_seed, action_size, initial_learning_rate, optimizer, rms_decay, rms_epsilon):
         self.device = device
 
         with tf.device(self.device) and tf.name_scope(name) as scope:
@@ -92,13 +92,13 @@ class DeepQNetwork(object):
             with tf.name_scope('train') as scope:
                 if optimizer.lower() == 'adam':
                     # Adam Optimizer
-                    self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.obj_function)
+                    self.train_step = tf.train.AdamOptimizer(initial_learning_rate).minimize(self.obj_function)
                 elif optimizer.lower() == 'gradientdecent':
                     # Gradient Descent
-                    self.train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(self.obj_function)
+                    self.train_step = tf.train.GradientDescentOptimizer(initial_learning_rate).minimize(self.obj_function)
                 else: 
                     # RMSProp
-                    self.train_step = tf.train.RMSPropOptimizer(learning_rate, decay=rms_decay).minimize(self.obj_function)
+                    self.train_step = tf.train.RMSPropOptimizer(initial_learning_rate, decay=rms_decay, epsilon=rms_epsilon).minimize(self.obj_function)
 
             # Specify how accuracy is measured
             with tf.name_scope('accuracy') as scope:
@@ -110,8 +110,9 @@ class DeepQNetwork(object):
     '''
     Utilizes the optimizer and objectie function to train the network based on the input and target output.
     '''
-    def train(self, sess, s_input, a_input, target_output):
+    def train(self, sess, s_input, a_input, target_output, learn_rate):
         with tf.device(self.device):
+            self.train_step.learn_rate = learn_rate
             _, loss = sess.run([self.train_step, self.obj_function],
                                     feed_dict={self.s: s_input,
                                             self.a: a_input,
