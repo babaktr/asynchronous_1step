@@ -52,7 +52,7 @@ while global_step > global_max_steps do
 #### General settings
 * ```game``` - ```Breakout-v0``` - Name of the Atari game to play. Full list [here](https://gym.openai.com/envs/).
 * ```use_gpu``` - ```False``` - If TensorFlow operations should run on GPU rather than CPU.
-* ```average_summary```- ```20``` - How many episodes to average histogram summary over.
+* ```average_summary```- ```100``` - How many episodes to average histogram summary over.
 * ```log``` - ```False``` - If log level should be verbose.
 * ```random_seed``` - ```123``` - Sets the random seed.
 
@@ -60,19 +60,20 @@ while global_step > global_max_steps do
 * ```parallel_agents``` - ```8``` - Number of asynchronous agents (threads) to train with.
 * ```global_max_steps``` - ```80 000 000``` - Maximum training steps.
 * ```local_max_steps``` - ```5``` - Frequency with which each agent network is updated (I_target).
-* ```target_network_update``` - ```40 000``` - Frequency with which the shared target network is updated (I_AsyncUpdate).
-* ```frame_skip``` - ```0``` - How many frames to skip on each step.
+* ```target_network_update``` - ```10 000``` - Frequency with which the shared target network is updated (I_AsyncUpdate).
 * ```no_op_max``` -  ```0``` - How many no-op actions to take at the beginning of each episode.
 
 #### Method settings
 * ```method``` - ```q``` - Training algorithm to use [q, sarsa]. Defaults to Q-learning.
 * ```gamma``` - ```0.99``` - Discount factor for rewards.
-* ```epsilon_anneal``` - ```4 000 000``` - Number of steps to anneal epsilon.
+* ```epsilon_anneal``` - ```1 000 000``` - Number of steps to anneal epsilon.
 
 #### Optimizer settings
 * ```optimizer``` - ```rmsprop``` - Which optimizer to use ```[adam, gradientdescent, rmsprop]```. Defaults to ```rmsprop```.
 * ```rms_decay``` - ```0.99``` - RMSProp decay parameter.
-* ```learning_rate``` - ```0.0001``` - Initial learning rate.
+* ```rms_epsilon``` - ```0.1``` RMSProp epsilon parameter.
+* ```learning_rate``` - ```0.0007``` - Initial learning rate.
+* ```anneal_learning_rate``` - ```True``` - If learning rate should be annealed over global max steps.
 
 #### Testing settings
 **Not yet used**
