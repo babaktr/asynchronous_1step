@@ -90,18 +90,6 @@ def onehot_vector(action, action_size):
     return vector
 
 '''
-Return empty arrays to reset gradients.
-'''
-def reset_gradient_arrays():
-    return [], [], []
-
-'''
-Return empty arrays to reset stats.
-'''
-def reset_stat_arrays():
-    return [], [], [], [], [], []
-
-'''
 Vertically stack batches to match network structure
 '''
 def stack_batches(state_batch, action_batch, y_batch):
@@ -148,10 +136,10 @@ def worker_thread(thread_index, local_game_state):
     epsilon = 1.0
 
     # Prepare gradiets
-    y_batch, state_batch, action_batch = reset_gradient_arrays()
+    y_batch, state_batch, action_batch = [], [], []
 
     # Prepare stats
-    action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
+    action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = [], [], [], [], [], []
 
     time.sleep(0.5*thread_index)
     print("Starting agent " + str(thread_index) + " with final epsilon: " + str(final_epsilon))
@@ -228,7 +216,7 @@ def worker_thread(thread_index, local_game_state):
                 acc_arr.append(acc)
 
                 # Clear gradients
-                y_batch, state_batch, action_batch = reset_gradient_arrays()
+                y_batch, state_batch, action_batch = [], [], []
       
             if terminal:
                 print 'Thread: {}  /  Global step: {}  /  Local steps: {}  /  Reward: {}  /  Qmax: {}  /  Epsilon: {}'.format(str(thread_index).zfill(2), 
@@ -247,7 +235,7 @@ def worker_thread(thread_index, local_game_state):
                             }) 
 
                 # Reset stats
-                action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = reset_stat_arrays()
+                action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr =  [], [], [], [], [], []
             else:
                 # Update current state from s_t to s_t1
                 state = new_state
