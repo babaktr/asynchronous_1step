@@ -43,7 +43,7 @@ while global_step > global_max_steps do
     if global_step % target_network_update == 0 then
         Update the target network θ' ← θ
     end if
-    if local_step % local_max_steps == 0 or s is terminal then
+    if local_step % local_max_steps == 0 or s' is terminal then
         Perform asynchronous update of θ using dθ.
         Clear gradients dθ ← 0.
     end if
