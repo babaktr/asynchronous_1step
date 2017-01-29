@@ -5,8 +5,6 @@ from network import DeepQNetwork
 from game_state import GameState
 from stats import Stats
 
-import matplotlib.pyplot as plt
-
 from threading import Thread
 
 import time 
@@ -65,7 +63,7 @@ def anneal_epsilon(epsilon, final_epsilon, step):
     if epsilon > final_epsilon:
         return 1.0 - step * ((1.0 - final_epsilon) / settings.epsilon_anneal)
     else:
-        return epsilon
+        return final_epsilon
 
 '''
 Anneal learning rate.
