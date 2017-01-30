@@ -334,13 +334,12 @@ for t in workers:
     t.start()
 
 signal.pause()
-
-print 'Now saving checkpoint. Please wait'
     
 for t in workers:
     t.join()
 
 if settings.save_checkpoint:
+    print 'Now saving checkpoint. Please wait'
     if not os.path.exists('./checkpoints'):
         os.mkdir('./checkpoints')  
     if not os.path.exists(checkpoint_dir):
