@@ -57,6 +57,7 @@ while global_step > global_max_steps do
 * ```save_stats``` - ```True``` If it should save stats for Tensorboard.
 * ```random_seed``` - ```123``` - Sets the random seed.
 * ```use_gpu``` - ```False``` - If TensorFlow operations should run on GPU rather than CPU.
+* ```display``` - ```False``` - If it you want to render the game.
 * ```log``` - ```False``` - For a verbose log.
 
 
