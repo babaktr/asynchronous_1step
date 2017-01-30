@@ -310,6 +310,8 @@ stats = Stats(sess, summary_writer, settings.histogram_summary)
 init = tf.global_variables_initializer()
 sess.run(init)
 
+wall_t = 0
+
 # Checkpoint handler
 if settings.load_checkpoint:
     checkpoint_dir = './checkpoints/{}/'.format(experiment_name)
