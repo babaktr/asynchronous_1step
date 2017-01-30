@@ -22,6 +22,7 @@ flags.DEFINE_boolean('save_checkpoint', True, 'If it should should save checkpoi
 flags.DEFINE_boolean('save_stats', True, 'If it should save stats for Tensorboard.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 flags.DEFINE_boolean('use_gpu', False, 'If it should run on GPU rather than CPU.')
+flags.DEFINE_boolean('display', False, 'If it you want to render the game.')
 flags.DEFINE_boolean('log', False, 'For a verbose log.')
 
 # Training settings
