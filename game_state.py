@@ -10,7 +10,6 @@ class GameState(object):
         np.random.seed(random_seed)
         self.log = log
         self.display = display
-        self.no_op_max = no_op_max
 
         # Load game environment
         self.game = gym.make(game)
