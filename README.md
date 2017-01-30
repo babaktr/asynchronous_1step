@@ -51,10 +51,14 @@ while global_step > global_max_steps do
 
 #### General settings
 * ```game``` - ```Breakout-v0``` - Name of the Atari game to play. Full list [here](https://gym.openai.com/envs/).
-* ```use_gpu``` - ```False``` - If TensorFlow operations should run on GPU rather than CPU.
-* ```average_summary```- ```100``` - How many episodes to average histogram summary over.
-* ```log``` - ```False``` - If log level should be verbose.
+* ```histrogram_summary```- ```500``` - How many episodes to average histogram summary over.
+* ```load_checkpoint``` - ```True``` - If it should should from available checkpoints.
+* ```save_checkpoint``` - ```True``` - If it should should save checkpoints when break is triggered.
+* ```save_stats``` - ```True``` If it should save stats for Tensorboard.
 * ```random_seed``` - ```123``` - Sets the random seed.
+* ```use_gpu``` - ```False``` - If TensorFlow operations should run on GPU rather than CPU.
+* ```log``` - ```False``` - For a verbose log.
+
 
 #### Training settings
 * ```parallel_agents``` - ```8``` - Number of asynchronous agents (threads) to train with.
@@ -73,10 +77,3 @@ while global_step > global_max_steps do
 * ```rms_epsilon``` - ```0.1``` RMSProp epsilon parameter.
 * ```learning_rate``` - ```0.0007``` - Initial learning rate.
 * ```anneal_learning_rate``` - ```True``` - If learning rate should be annealed over global max steps.
-
-#### Testing settings
-**Not yet used**
-* ```evaluate_model``` - ```False``` - It model should run through OpenAIs Gym evaluation.
-* ```display``` - ```False``` - If it should display the agent.
-* ```test_runs``` - ```100```- Number of times to run the evaluation.
-* ```test_epsilon``` - ```0.0``` - Epsilon to use on test run.

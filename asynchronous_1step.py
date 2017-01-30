@@ -16,13 +16,13 @@ flags = tf.app.flags
 
 # General settings
 flags.DEFINE_string('game', 'Breakout-v0', 'Name of the Atari game to play. Full list: https://gym.openai.com/envs/')
-flags.DEFINE_boolean('use_gpu', False, 'If it should run on GPU rather than CPU.')
 flags.DEFINE_integer('histogram_summary', 500, 'How many episodes to plot histogram summary over.')
-flags.DEFINE_boolean('log', False, 'If log level should be verbose.')
 flags.DEFINE_boolean('load_checkpoint', True, 'If it should should from available checkpoints.')
 flags.DEFINE_boolean('save_checkpoint', True, 'If it should should save checkpoints when break is triggered.')
-flags.DEFINE_boolean('save_stats', True, 'If it should save from stats.')
+flags.DEFINE_boolean('save_stats', True, 'If it should save stats for Tensorboard.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
+flags.DEFINE_boolean('use_gpu', False, 'If it should run on GPU rather than CPU.')
+flags.DEFINE_boolean('log', False, 'For a verbose log.')
 
 # Training settings
 flags.DEFINE_integer('parallel_agents', 8, 'Number of asynchronous agents (threads) to train with.')
@@ -41,13 +41,6 @@ flags.DEFINE_float('rms_decay', 0.99, 'RMSProp decay parameter.')
 flags.DEFINE_float('rms_epsilon', 0.1, 'RMSProp epsilon parameter.')
 flags.DEFINE_float('learning_rate', 0.0007, 'Initial learning rate.')
 flags.DEFINE_boolean('anneal_learning_rate', True, 'If learning rate should be annealed over global max steps.')
-
-# Testing settings
-# ---- Not yet used ----
-flags.DEFINE_boolean('evaluate_model', False, 'It model should run through OpenAIs Gym evaluation.')
-flags.DEFINE_boolean('display', False, 'If it should display the agent.')
-flags.DEFINE_integer('test_runs', 100, 'Number of times to run the evaluation.')
-flags.DEFINE_float('test_epsilon', 0.0, 'Epsilon to use on test run.')
 
 settings = flags.FLAGS
 
