@@ -6,6 +6,7 @@ from game_state import GameState
 from stats import Stats
 
 from threading import Thread
+from threading import Lock
 
 import time 
 import signal
@@ -18,6 +19,9 @@ flags.DEFINE_string('game', 'Breakout-v0', 'Name of the Atari game to play. Full
 flags.DEFINE_boolean('use_gpu', False, 'If it should run on GPU rather than CPU.')
 flags.DEFINE_integer('histogram_summary', 20, 'How many episodes to plot histogram summary over.')
 flags.DEFINE_boolean('log', False, 'If log level should be verbose.')
+flags.DEFINE_boolean('load_checkpoint', True, 'If it should should from available checkpoints.')
+flags.DEFINE_boolean('save_checkpoint', True, 'If it should should save checkpoints when break is triggered.')
+flags.DEFINE_boolean('save_stats', True, 'If it should save from stats.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 
 # Training settings
@@ -197,8 +201,14 @@ def worker_thread(thread_index, local_game_state):
 
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
-                print 'Thread {} updated target network on step: {}'.format(thread_index, global_step)
-                sess.run(target_network.sync_variables_from(online_network))
+                lock.acquire()
+                try:
+                    thread_i = thread_index
+                    thread_step = global_step
+                    sess.run(target_network.sync_variables_from(online_network))ep=
+                finally:
+                    print 'Thread {} updated target network on step: {}'.format(thread_i, thread_step)
+                    lock.release()
 
             # Update online network on I_AsyncUpdate
             if local_step % settings.local_max_steps == 0 or terminal:
@@ -222,16 +232,17 @@ def worker_thread(thread_index, local_game_state):
                     global_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'), format(np.average(epsilon_arr), '.2f'))
 
                 # Update stats
-                stats.update({'loss': np.average(loss_arr), 
-                            'accuracy': np.average(acc_arr),
-                            'learning_rate': learning_rate,
-                            'qmax': np.average(q_max_arr),
-                            'epsilon': np.average(epsilon_arr),
-                            'episode_actions': action_arr,
-                            'reward': np.sum(reward_arr),
-                            'steps': local_step,
-                            'step': global_step
-                            }) 
+                if settings.save_stats:
+                    stats.update({'loss': np.average(loss_arr), 
+                                'accuracy': np.average(acc_arr),
+                                'learning_rate': learning_rate,
+                                'qmax': np.average(q_max_arr),
+                                'epsilon': np.average(epsilon_arr),
+                                'episode_actions': action_arr,
+                                'reward': np.sum(reward_arr),
+                                'steps': local_step,
+                                'step': global_step
+                                }) 
 
                 # Reset stats
                 action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr =  [], [], [], [], [], []
@@ -250,6 +261,8 @@ if settings.use_gpu:
     device = '/gpu:0'
 else:
     device = '/cpu:0'
+
+lock = Lock()
 
 # Prepare game environments
 local_game_states = []
@@ -298,9 +311,10 @@ init = tf.global_variables_initializer()
 sess.run(init)
 
 # Checkpoint handler
-checkpoint_dir = './checkpoints/{}/'.format(experiment_name)
-saver = tf.train.Saver(max_to_keep=1)
-wall_t, global_step = load_checkpoint(sess, saver, checkpoint_dir)
+if settings.load_checkpoint:
+    checkpoint_dir = './checkpoints/{}/'.format(experiment_name)
+    saver = tf.train.Saver(max_to_keep=1)
+    wall_t, global_step = load_checkpoint(sess, saver, checkpoint_dir)
 
 # Prepare parallel workers
 workers = []
@@ -326,16 +340,16 @@ print 'Now saving checkpoint. Please wait'
 for t in workers:
     t.join()
 
-if not os.path.exists('./checkpoints'):
-    os.mkdir('./checkpoints')  
-if not os.path.exists(checkpoint_dir):
-    os.mkdir(checkpoint_dir)  
+if settings.save_checkpoint:
+    if not os.path.exists('./checkpoints'):
+        os.mkdir('./checkpoints')  
+    if not os.path.exists(checkpoint_dir):
+        os.mkdir(checkpoint_dir)  
 
+    # write wall time
+    wall_t = time.time() - start_time
+    wall_t_fname = checkpoint_dir + '/' + 'wall_t.' + str(global_step)
+    with open(wall_t_fname, 'w') as f:
+        f.write(str(wall_t))
 
-# write wall time
-wall_t = time.time() - start_time
-wall_t_fname = checkpoint_dir + '/' + 'wall_t.' + str(global_step)
-with open(wall_t_fname, 'w') as f:
-    f.write(str(wall_t))
-
-saver.save(sess, checkpoint_dir + '/' 'checkpoint', global_step = global_step)
+    saver.save(sess, checkpoint_dir + '/' 'checkpoint', global_step = global_step)
