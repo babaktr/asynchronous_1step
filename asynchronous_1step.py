@@ -17,7 +17,7 @@ flags = tf.app.flags
 # General settings
 flags.DEFINE_string('game', 'Breakout-v0', 'Name of the Atari game to play. Full list: https://gym.openai.com/envs/')
 flags.DEFINE_boolean('use_gpu', False, 'If it should run on GPU rather than CPU.')
-flags.DEFINE_integer('histogram_summary', 20, 'How many episodes to plot histogram summary over.')
+flags.DEFINE_integer('histogram_summary', 500, 'How many episodes to plot histogram summary over.')
 flags.DEFINE_boolean('log', False, 'If log level should be verbose.')
 flags.DEFINE_boolean('load_checkpoint', True, 'If it should should from available checkpoints.')
 flags.DEFINE_boolean('save_checkpoint', True, 'If it should should save checkpoints when break is triggered.')
@@ -205,7 +205,7 @@ def worker_thread(thread_index, local_game_state):
                 try:
                     thread_i = thread_index
                     thread_step = global_step
-                    sess.run(target_network.sync_variables_from(online_network))ep=
+                    sess.run(target_network.sync_variables_from(online_network))
                 finally:
                     print 'Thread {} updated target network on step: {}'.format(thread_i, thread_step)
                     lock.release()
