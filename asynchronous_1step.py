@@ -197,10 +197,8 @@ def worker_thread(thread_index, local_game_state):
             if global_step % settings.target_network_update == 0:
                 lock.acquire()
                 try:
-                    thread_i = thread_index
-                    thread_step = global_step
                     sess.run(target_network.sync_variables_from(online_network))
-                    print 'Thread {} updated target network on step: {}'.format(thread_i, thread_step)
+                    print 'Thread {} updated target network on step: {}'.format(thread_index, global_step)
 
                 finally:
                     lock.release()
