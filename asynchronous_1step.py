@@ -206,8 +206,9 @@ def worker_thread(thread_index, local_game_state):
                     thread_i = thread_index
                     thread_step = global_step
                     sess.run(target_network.sync_variables_from(online_network))
-                finally:
                     print 'Thread {} updated target network on step: {}'.format(thread_i, thread_step)
+
+                finally:
                     lock.release()
 
             # Update online network on I_AsyncUpdate
