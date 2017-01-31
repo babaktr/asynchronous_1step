@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from network import DeepQNetwork
 from game_state import GameState
 
-
 import time 
 import signal
 import os
@@ -15,11 +14,11 @@ flags = tf.app.flags
 # General settings
 flags.DEFINE_string('mode', 'play', 'What to run with the loaded model [play, visualize].')
 flags.DEFINE_string('game', 'Breakout-v0', 'What game to play.')
-flags.DEFINE_boolean('load_checkpoint', True, 'If it should should from available checkpoints.')
+flags.DEFINE_boolean('load_checkpoint', True, 'If it should load from available checkpoints.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 flags.DEFINE_boolean('log', False, 'For a verbose log.')
 
-flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps.')
+flags.DEFINE_integer('global_max_steps', 80000000, 'Set this to the same as in your experiment.')
 
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
