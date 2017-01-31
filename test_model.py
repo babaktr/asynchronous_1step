@@ -23,7 +23,7 @@ flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps.')
 
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
-flags.DEFINE_integer('epsilon', 1000000, 'Which epsilon to run with.')
+flags.DEFINE_float('epsilon', 0.05, 'Which epsilon to run with.')
 
 settings = flags.FLAGS
 
@@ -125,8 +125,8 @@ def play(game_state):
             q_max_arr.append(np.max(q_values))
         
             if terminal:
-                print 'Episode: {}  /  steps: {}  /  Reward: {}  /  Qmax: {}  /  Epsilon: {}'.format(episode, 
-                    step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'), format(settings.epsilon))
+                print 'Episode: {}  /  steps: {}  /  Reward: {}  /  Qmax: {}'.format(episode, 
+                    step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'))
                 episode +=1
             else:
                 # Update current state from s_t to s_t1
