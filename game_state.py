@@ -32,8 +32,8 @@ class GameState(object):
     def reset(self):
         x_t_raw = self.game.reset()
     
-        x_t = self.process_frame(x_t_raw)
-        self.s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
+        self.x_t = self.process_frame(x_t_raw)
+        self.s_t = np.stack((self.x_t, self.x_t, self.x_t, self.x_t), axis=2)
 
         return self.s_t
 
