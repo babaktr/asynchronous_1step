@@ -16,7 +16,7 @@ class DeepQNetwork(object):
     Set up weight variable.
     '''
     def weight_variable(self, shape, name):
-        initializer = tf.contrib.layers.xavier_initializer_conv2d()
+        initializer = tf.contrib.layers.xavier_initializer()
         return tf.Variable(initializer(shape=shape), name=name)
     
     '''
