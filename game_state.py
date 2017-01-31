@@ -24,7 +24,7 @@ class GameState(object):
             # actions the game you want to run uses to speed up the training
             # significantly!
             self.action_size = self.game.action_space.n
-            seflf.action_shift = 0
+            self.action_shift = 0
 
     '''
     Resets game environments and regenerates new internal state s_t.
