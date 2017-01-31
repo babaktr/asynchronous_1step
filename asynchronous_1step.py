@@ -273,10 +273,10 @@ online_network = DeepQNetwork(n,
                             device, 
                             settings.random_seed, 
                             game.action_size, 
-                            settings.learning_rate, 
-                            settings.optimizer,
-                            settings.rms_decay,
-                            settings.rms_epsilon)
+                            initial_learning_rate=settings.learning_rate, 
+                            optimizer=settings.optimizer,
+                            rms_decay=settings.rms_decay,
+                            rms_epsilon=settings.rms_epsilon)
 
 # Set target Deep Q Network
 target_network = DeepQNetwork(-1, 
@@ -284,10 +284,10 @@ target_network = DeepQNetwork(-1,
                             device, 
                             settings.random_seed, 
                             game.action_size,
-                            settings.learning_rate, 
-                            settings.optimizer,
-                            settings.rms_decay,
-                            settings.rms_epsilon)
+                            initial_learning_rate=settings.learning_rate, 
+                            optimizer=settings.optimizer,
+                            rms_decay=settings.rms_decay,
+                            rms_epsilon=settings.rms_epsilon)
 
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
                                         allow_soft_placement=True))
