@@ -41,7 +41,9 @@ class GameState(object):
     Processes image frame for network input.
     '''
     def process_frame(self, frame):
-        return resize(rgb2gray(frame), (84, 84))
+        frame_cut = frame[30:195,10:150]
+        self.x_t = resize(rgb2gray(frame_cut), (84, 84))
+        return self.x_t
 
     '''
     Make action and observe enviroment return.
