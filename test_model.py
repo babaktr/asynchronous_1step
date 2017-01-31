@@ -141,6 +141,9 @@ def visualize(game_state):
 
     state = game_state.reset()
 
+    for n in range(40):
+        state, _, _ = game.step(0)
+
     x_t = game.x_t
 
     plt.imshow(x_t, interpolation="nearest", cmap=plt.cm.gray)
