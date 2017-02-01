@@ -122,6 +122,43 @@ def signal_handler(signal, frame):
     print 'You pressed Ctrl+C!'
     stop_requested = True
 
+def run_eval(sess, episodes):
+    global eval_network, online_network, stats
+
+    sess.run(eval_network.sync_variables_from(online_network))
+
+    game_state = GameState(settings.random_seed,
+                    settings.log, 
+                    settings.game, 
+                    False)
+    episode = 0
+    reward_arr = []
+    step_arr = []
+    for n in range(episodes):
+        print "start game {}".format(n)
+        terminal = False
+        local_step = 0
+        rewards = 0
+        state = game_state.reset()
+        while not terminal:
+            q_values = online_network.predict(sess, [state])
+            action = select_action(0, q_values, game_state.action_size)
+            game_state.step(action)
+            new_state, reward, terminal = local_game_state.step(action)
+            rewards += reward
+            local_step += 1
+            state = new_state
+
+        reward_arr.append(rewards)
+        step_arr.append(local_step)
+        print 'episode {} finished with reward {}'.format(n, rewards)
+
+    stats.update_eval({'rewards': np.average(reward_arr), 
+                        'steps': np.average(step_arr),
+                        'step': global_step
+                        }) 
+
+
 '''
 Worker thread that runs an agent training in a local game enviroment.
 '''
@@ -219,6 +256,11 @@ def worker_thread(thread_index, local_game_state):
 
                 # Clear gradients
                 y_batch, state_batch, action_batch = [], [], []
+
+            if global_step % 5000 == 0:
+                t = Thread(target=run_eval, args=(sess, 5))
+                t.start()
+                t.join()
       
             if terminal:
                 print 'Thread: {}  /  Global step: {}  /  Local steps: {}  /  Reward: {}  /  Qmax: {}  /  Epsilon: {}'.format(str(thread_index).zfill(2), 
@@ -268,7 +310,7 @@ for n in range(settings.parallel_agents):
 
 # Prepare online network
 game = local_game_states[0]
-online_network = DeepQNetwork(n, 
+online_network = DeepQNetwork(0, 
                             'online_network',
                             device, 
                             settings.random_seed, 
@@ -279,8 +321,19 @@ online_network = DeepQNetwork(n,
                             rms_epsilon=settings.rms_epsilon)
 
 # Set target Deep Q Network
-target_network = DeepQNetwork(-1, 
+target_network = DeepQNetwork(1, 
                             'target_network',
+                            device, 
+                            settings.random_seed, 
+                            game.action_size,
+                            initial_learning_rate=settings.learning_rate, 
+                            optimizer=settings.optimizer,
+                            rms_decay=settings.rms_decay,
+                            rms_epsilon=settings.rms_epsilon)
+
+
+eval_network = DeepQNetwork(-1, 
+                            'eval_network',
                             device, 
                             settings.random_seed, 
                             game.action_size,
