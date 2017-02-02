@@ -122,8 +122,8 @@ class DeepQNetwork(object):
             self.train_step.learn_rate = learn_rate
             _, loss = sess.run([self.train_step, self.obj_function],
                                     feed_dict={self.s: s_input,
-                                            self.a: a_input,
-                                            self.y: target_output})
+                                                self.a: a_input,
+                                                self.y: target_output})
             return loss
 
     '''
@@ -140,7 +140,7 @@ class DeepQNetwork(object):
     def get_accuracy(self, sess, s_input, target_output):
         with tf.device(self.device):
             acc = sess.run(self.accuracy, feed_dict={self.s: s_input, 
-                                                    self.y: target_output})
+                                                        self.y: target_output})
             return acc
 
     def get_variables(self):
