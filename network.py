@@ -93,8 +93,8 @@ class DeepQNetwork(object):
 
             # Objective function 
             with tf.name_scope('loss') as scope:
-                action_q_values = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
-                self.obj_function = tf.reduce_mean(tf.square(tf.subtract(self.y, action_q_values)))
+                target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
+                self.obj_function = tf.reduce_mean(tf.square(tf.subtract(self.y, target_q_value)))
 
             with tf.name_scope('train') as scope:
                 if optimizer.lower() == 'adam':
