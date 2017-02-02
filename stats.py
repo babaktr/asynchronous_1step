@@ -2,69 +2,6 @@ import tensorflow as tf
 import numpy as np
 
 class Stats(object):  
-<<<<<<< HEAD
-  def __init__(self, sess, summary_writer, histogram_summary):
-    self.sess = sess
-
-    self.histogram_summary = histogram_summary
-    self.histogram_summary_count = 0
-
-    self.writer = summary_writer
-
-    with tf.variable_scope('summary'):
-      scalar_summary_tags = ['actions/0', 'actions/1', 'actions/2', 'network/loss', 'network/accuracy', 'network/learning_rate', 'episode/avg_q_max', 'episode/epsilon', 'episode/reward', 'episode/steps']
-
-      self.summary_placeholders = {}
-      self.summary_ops = {}
-
-    for tag in scalar_summary_tags:
-        self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag)
-        self.summary_ops[tag] = tf.summary.scalar(tag, self.summary_placeholders[tag])
-    
-    with tf.variable_scope('histogram'):
-      histogram_summary_tags = ['episode/episode_rewards', 'episode/episode_steps', 'episode/episode_actions']
-
-      self.histogram_placeholders = {}
-      self.histogram_ops = {}
-
-    for tag in histogram_summary_tags:
-        self.histogram_placeholders[tag] = tf.placeholder('float32', None, name=tag)
-        self.histogram_ops[tag] = tf.summary.histogram(tag, self.histogram_placeholders[tag])
-
-    self.reset_saved_values()
-
-  def reset_saved_values(self):
-    self.episode_rewards = []
-    self.episode_actions = []
-    self.episode_steps = []
-
-  def update(self, dictionary):
-    # Save for histogram update
-    self.episode_rewards.append(dictionary['reward'])
-    self.episode_steps.append(dictionary['steps'])
-    self.episode_actions = self.episode_actions + dictionary['episode_actions']
-    actions = dictionary['episode_actions']
-
-    self.inject_summary({
-          'network/loss': dictionary['loss'],
-          'network/accuracy': dictionary['accuracy'],
-          'network/learning_rate': dictionary['learning_rate'],
-          'episode/avg_q_max': dictionary['qmax'],
-          'episode/epsilon': dictionary['epsilon'],
-          'episode/reward': dictionary['reward'],
-          'episode/steps':dictionary['steps'],
-          'actions/0': float(actions.count(0))/len(actions),
-          'actions/1': float(actions.count(1))/len(actions),
-          'actions/2': float(actions.count(2))/len(actions)
-        }, dictionary['step'])
-
-    if self.histogram_summary_count % self.histogram_summary == 0:
-        self.inject_histogram({
-          'episode/episode_rewards': self.episode_rewards,
-          'episode/episode_steps': self.episode_steps,
-          'episode/episode_actions': self.episode_actions 
-        }, dictionary['step'])
-=======
     def __init__(self, sess, summary_writer, histogram_summary):
         self.sess = sess
 
@@ -74,9 +11,10 @@ class Stats(object):
         self.writer = summary_writer
 
         with tf.variable_scope('summary'):
-            scalar_summary_tags = ['network/loss', 'network/accuracy', 'network/learning_rate', 
-                                  'episode/avg_q_max', 'episode/epsilon', 'episode/reward', 'episode/steps',
-                                  'evaluation/rewards', 'evaluation/steps']
+            scalar_summary_tags = ['actions/0', 'actions/1', 'actions/2', 
+                                'network/loss', 'network/accuracy', 'network/learning_rate', 
+                                'episode/avg_q_max', 'episode/epsilon', 'episode/reward', 'episode/steps',
+                                'evaluation/rewards', 'evaluation/steps']
 
             self.summary_placeholders = {}
             self.summary_ops = {}
@@ -95,7 +33,6 @@ class Stats(object):
             self.histogram_placeholders[tag] = tf.placeholder('float32', None, name=tag)
             self.histogram_ops[tag] = tf.summary.histogram(tag, self.histogram_placeholders[tag])
 
->>>>>>> 106b9f1dffab4c70eb1bdb7e9fae7f5338d5eefc
         self.reset_saved_values()
 
     def reset_saved_values(self):
@@ -107,24 +44,27 @@ class Stats(object):
         # Save for histogram update
         self.episode_rewards.append(dictionary['reward'])
         self.episode_steps.append(dictionary['steps'])
-        self.episode_actions = self.episode_actions + dictionary['episode_actions']
+        actions = dictionary['episode_actions']
+        self.episode_actions = self.episode_actions + actions
 
-        self.inject_summary({
-              'network/loss': dictionary['loss'],
-              'network/accuracy': dictionary['accuracy'],
-              'network/learning_rate': dictionary['learning_rate'],
-              'episode/avg_q_max': dictionary['qmax'],
-              'episode/epsilon': dictionary['epsilon'],
-              'episode/reward': dictionary['reward'],
-              'episode/steps':dictionary['steps']
-            }, dictionary['step'])
+        self.inject_summary({'network/loss': dictionary['loss'],
+                            'network/accuracy': dictionary['accuracy'],
+                            'network/learning_rate': dictionary['learning_rate'],
+                            'episode/avg_q_max': dictionary['qmax'],
+                            'episode/epsilon': dictionary['epsilon'],
+                            'episode/reward': dictionary['reward'],
+                            'episode/steps':dictionary['steps'],
+                            'actions/0': float(actions.count(0))/len(actions),
+                            'actions/1': float(actions.count(1))/len(actions),
+                            'actions/2': float(actions.count(2))/len(actions)
+                            }, dictionary['step'])
 
         if self.histogram_summary_count % self.histogram_summary == 0:
-            self.inject_histogram({
-              'episode/episode_rewards': self.episode_rewards,
-              'episode/episode_steps': self.episode_steps,
-              'episode/episode_actions': self.episode_actions 
-            }, dictionary['step'])
+            self.inject_histogram({'episode/episode_rewards': self.episode_rewards,
+                                'episode/episode_steps': self.episode_steps,
+                                'episode/episode_actions': self.episode_actions 
+                                }, dictionary['step'])
+
             self.reset_saved_values()
 
         self.histogram_summary_count += 1

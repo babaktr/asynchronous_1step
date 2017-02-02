@@ -240,7 +240,7 @@ def worker_thread(thread_index, local_game_state):
 
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
-                if not lock.acquire(False)
+                if not lock.acquire(False):
                     try:
                         sess.run(target_network.sync_variables_from(online_network))
                         print 'Thread {} updated target network on step: {}'.format(thread_index, global_step)
