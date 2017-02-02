@@ -43,6 +43,14 @@ flags.DEFINE_float('rms_epsilon', 0.1, 'RMSProp epsilon parameter.')
 flags.DEFINE_float('learning_rate', 0.0007, 'Initial learning rate.')
 flags.DEFINE_boolean('anneal_learning_rate', True, 'If learning rate should be annealed over global max steps.')
 
+# Evaluation settings
+flags.DEFINE_boolean('evaluate', True, 'If it should run continous evaluation throughout the training session.')
+flags.DEFINE_integer('evaluation_episodes', 10, 'How many evaluation episodes to run (and average the evaluation over).')
+flags.DEFINE_integer('evaluation_frequency', 100000, 'The frequency of evaluation runs.')
+
+
+
+
 settings = flags.FLAGS
 
 '''
@@ -122,48 +130,43 @@ def signal_handler(signal, frame):
     print 'You pressed Ctrl+C!'
     stop_requested = True
 
-def run_eval(sess, episodes):
-    global eval_network, online_network, stats
-
-    sess.run(eval_network.sync_variables_from(online_network))
-
-    game_state = GameState(settings.random_seed,
-                    settings.log, 
-                    settings.game, 
-                    False)
-    episode = 0
+def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_step):
+    global stop_requested
+    print '>>>>>> Starting evaluation at step {}'.format(at_step)
+    rewards = 0
     reward_arr = []
     step_arr = []
     for n in range(episodes):
-        print "start game {}".format(n)
-        terminal = False
         local_step = 0
-        rewards = 0
+        terminal = False
         state = game_state.reset()
-        while not terminal:
-            q_values = online_network.predict(sess, [state])
-            action = select_action(0, q_values, game_state.action_size)
-            game_state.step(action)
-            new_state, reward, terminal = local_game_state.step(action)
+        while not terminal and not stop_requested: 
+            q_values = evaluation_network.predict(sess, [state])
+            action = select_action(0.01, q_values, game_state.action_size)
+            new_state, reward, terminal = game_state.step(action)
             rewards += reward
             local_step += 1
-            state = new_state
-
-        reward_arr.append(rewards)
-        step_arr.append(local_step)
-        print 'episode {} finished with reward {}'.format(n, rewards)
+            if terminal:
+                reward_arr.append(rewards)
+                step_arr.append(local_step)
+                print '>>>>>> Evaluation episode {}/{} finished with reward {} on step {}.'.format(n+1, episodes, rewards, local_step)
+                rewards = 0
+            else:
+                state = new_state
+                game_state.update_state()
 
     stats.update_eval({'rewards': np.average(reward_arr), 
                         'steps': np.average(step_arr),
-                        'step': global_step
+                        'step': at_step
                         }) 
+    print ' >>>>>>Evaluation done.'
 
 
 '''
 Worker thread that runs an agent training in a local game enviroment.
 '''
 def worker_thread(thread_index, local_game_state): 
-    global stop_requested, global_step, target_network, online_network, sess, stats
+    global stop_requested, global_step, target_network, online_network, evaluation_network, sess, stats, lock, eval_lock
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
@@ -183,6 +186,7 @@ def worker_thread(thread_index, local_game_state):
         # Reset counters and values
         local_step = 0
         terminal = False
+        run_eval = False
 
         # Get initial game observation
         state = local_game_state.reset()
@@ -221,24 +225,26 @@ def worker_thread(thread_index, local_game_state):
             state_batch.append([state])
             action_batch.append(onehot_vector(action, local_game_state.action_size))
 
-            # Update counters and values
-            local_step += 1
-            global_step += 1
-
             # Save for stats
             reward_arr.append(reward)
             q_max_arr.append(np.max(q_values))
             action_arr.append(action)
 
+            # Update counters and values
+            local_step += 1
+            global_step += 1
+            if global_step % settings.evaluation_frequency == 0:
+                run_eval = True
+                at_step = global_step
+
             # Update target network on I_target
             if global_step % settings.target_network_update == 0:
-                lock.acquire()
-                try:
-                    sess.run(target_network.sync_variables_from(online_network))
-                    print 'Thread {} updated target network on step: {}'.format(thread_index, global_step)
-
-                finally:
-                    lock.release()
+                if not lock.acquire(False)
+                    try:
+                        sess.run(target_network.sync_variables_from(online_network))
+                        print 'Thread {} updated target network on step: {}'.format(thread_index, global_step)
+                    finally:
+                        lock.release()
 
             # Update online network on I_AsyncUpdate
             if local_step % settings.local_max_steps == 0 or terminal:
@@ -257,11 +263,14 @@ def worker_thread(thread_index, local_game_state):
                 # Clear gradients
                 y_batch, state_batch, action_batch = [], [], []
 
-            if global_step % 5000 == 0:
-                t = Thread(target=run_eval, args=(sess, 5))
-                t.start()
-                t.join()
-      
+            if run_eval and settings.evaluate:
+                if not eval_lock.acquire(False):
+                    try:
+                        sess.run(evaluation_network.sync_variables_from(online_network))
+                        run_evaluation(sess, evaluation_network, stats, local_game_state, settings.evaluation_episodes, at_step)
+                    finally:
+                        eval_lock.release()
+          
             if terminal:
                 print 'Thread: {}  /  Global step: {}  /  Local steps: {}  /  Reward: {}  /  Qmax: {}  /  Epsilon: {}'.format(str(thread_index).zfill(2), 
                     global_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'), format(np.average(epsilon_arr), '.2f'))
@@ -298,6 +307,7 @@ else:
     device = '/cpu:0'
 
 lock = Lock()
+eval_lock = Lock()
 
 # Prepare game environments
 local_game_states = []
@@ -332,8 +342,8 @@ target_network = DeepQNetwork(1,
                             rms_epsilon=settings.rms_epsilon)
 
 
-eval_network = DeepQNetwork(-1, 
-                            'eval_network',
+evaluation_network = DeepQNetwork(-1, 
+                            'evaluation_network',
                             device, 
                             settings.random_seed, 
                             game.action_size,
