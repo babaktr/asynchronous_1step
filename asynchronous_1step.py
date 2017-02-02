@@ -49,8 +49,6 @@ flags.DEFINE_integer('evaluation_episodes', 10, 'How many evaluation episodes to
 flags.DEFINE_integer('evaluation_frequency', 100000, 'The frequency of evaluation runs.')
 
 
-
-
 settings = flags.FLAGS
 
 '''
@@ -130,6 +128,9 @@ def signal_handler(signal, frame):
     print 'You pressed Ctrl+C!'
     stop_requested = True
 
+'''
+Runs evaluation of the current network.
+'''
 def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_step):
     global stop_requested
     print '>>>>>> Starting evaluation at step {}'.format(at_step)
