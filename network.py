@@ -93,8 +93,8 @@ class DeepQNetwork(object):
 
             # Objective function 
             with tf.name_scope('loss') as scope:
-                action_q_values = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
-                self.obj_function = tf.reduce_mean(tf.square(tf.subtract(self.y, action_q_values)))
+                target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
+                self.obj_function = tf.reduce_mean(tf.square(tf.subtract(self.y, target_q_value)))
 
             with tf.name_scope('train') as scope:
                 if optimizer.lower() == 'adam':
@@ -122,8 +122,8 @@ class DeepQNetwork(object):
             self.train_step.learn_rate = learn_rate
             _, loss = sess.run([self.train_step, self.obj_function],
                                     feed_dict={self.s: s_input,
-                                            self.a: a_input,
-                                            self.y: target_output})
+                                                self.a: a_input,
+                                                self.y: target_output})
             return loss
 
     '''
@@ -140,7 +140,7 @@ class DeepQNetwork(object):
     def get_accuracy(self, sess, s_input, target_output):
         with tf.device(self.device):
             acc = sess.run(self.accuracy, feed_dict={self.s: s_input, 
-                                                    self.y: target_output})
+                                                        self.y: target_output})
             return acc
 
     def get_variables(self):
