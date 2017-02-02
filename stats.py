@@ -11,7 +11,7 @@ class Stats(object):
     self.writer = summary_writer
 
     with tf.variable_scope('summary'):
-      scalar_summary_tags = ['network/loss', 'network/accuracy', 'network/learning_rate', 'episode/avg_q_max', 'episode/epsilon', 'episode/reward', 'episode/steps']
+      scalar_summary_tags = ['actions/0', 'actions/1', 'actions/2', 'network/loss', 'network/accuracy', 'network/learning_rate', 'episode/avg_q_max', 'episode/epsilon', 'episode/reward', 'episode/steps']
 
       self.summary_placeholders = {}
       self.summary_ops = {}
@@ -42,6 +42,7 @@ class Stats(object):
     self.episode_rewards.append(dictionary['reward'])
     self.episode_steps.append(dictionary['steps'])
     self.episode_actions = self.episode_actions + dictionary['episode_actions']
+    actions = dictionary['episode_actions']
 
     self.inject_summary({
           'network/loss': dictionary['loss'],
@@ -50,7 +51,10 @@ class Stats(object):
           'episode/avg_q_max': dictionary['qmax'],
           'episode/epsilon': dictionary['epsilon'],
           'episode/reward': dictionary['reward'],
-          'episode/steps':dictionary['steps']
+          'episode/steps':dictionary['steps'],
+          'actions/0': float(actions.count(0))/len(actions),
+          'actions/1': float(actions.count(1))/len(actions),
+          'actions/2': float(actions.count(2))/len(actions)
         }, dictionary['step'])
 
     if self.histogram_summary_count % self.histogram_summary == 0:
