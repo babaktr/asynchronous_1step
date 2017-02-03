@@ -91,21 +91,28 @@ class DeepQNetwork(object):
                 with tf.name_scope('q_values') as scope:
                     self.q_values = tf.add(tf.matmul(h_fc1, self.W_fc2), self.b_fc2)
 
-            # Objective function 
-            with tf.name_scope('loss') as scope:
-                target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
-                self.obj_function = tf.reduce_mean(tf.square(tf.subtract(self.y, target_q_value)))
-
-            with tf.name_scope('train') as scope:
+            with tf.name_scope('optimizer') as scope:
                 if optimizer.lower() == 'adam':
                     # Adam Optimizer
-                    self.train_step = tf.train.AdamOptimizer(initial_learning_rate).minimize(self.obj_function)
+                    self.optimizer_function = tf.train.AdamOptimizer(initial_learning_rate)
                 elif optimizer.lower() == 'gradientdecent':
                     # Gradient Descent
-                    self.train_step = tf.train.GradientDescentOptimizer(initial_learning_rate).minimize(self.obj_function)
+                    self.optimizer_function = tf.train.GradientDescentOptimizer(initial_learning_rate)
                 else: 
                     # RMSProp
-                    self.train_step = tf.train.RMSPropOptimizer(initial_learning_rate, decay=rms_decay, epsilon=rms_epsilon).minimize(self.obj_function)
+                    self.optimizer_function = tf.train.RMSPropOptimizer(initial_learning_rate, decay=rms_decay, epsilon=rms_epsilon)
+
+                target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
+                self.loss_function = tf.reduce_mean(tf.square(tf.subtract(self.y, target_q_value)))
+
+                with tf.name_scope('gradient_clipping') as scope:
+                    # Compute gradients w.r.t. weights
+                    variables = self.get_variables()
+                    gradients = tf.gradients(self.loss_function, variables)
+                    # Apply gradient norm clipping
+                    gradients, _ = tf.clip_by_global_norm(gradients, 40.)
+                    gradient_variables = list(zip(gradients, variables))
+                    self.train_op = self.optimizer_function.apply_gradients(gradient_variables)
 
             # Specify how accuracy is measured
             with tf.name_scope('accuracy') as scope:
@@ -114,13 +121,14 @@ class DeepQNetwork(object):
                 higher_value = tf.reduce_max([max_q_value, estimated_value])
                 lower_value = tf.reduce_min([max_q_value, estimated_value])
                 self.accuracy = tf.div(lower_value, higher_value)
+    
     '''
     Utilizes the optimizer and objectie function to train the network based on the input and target output.
     '''
     def train(self, sess, s_input, a_input, target_output, learn_rate):
         with tf.device(self.device):
-            self.train_step.learn_rate = learn_rate
-            _, loss = sess.run([self.train_step, self.obj_function],
+            self.optimizer_function.learn_rate = learn_rate
+            _, loss = sess.run([self.train_op, self.loss_function],
                                     feed_dict={self.s: s_input,
                                                 self.a: a_input,
                                                 self.y: target_output})
