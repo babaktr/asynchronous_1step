@@ -179,7 +179,7 @@ def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_ste
 Worker thread that runs an agent training in a local game enviroment.
 '''
 def worker_thread(thread_index, local_game_state): 
-    global stop_requested, global_step, target_network, online_network, evaluation_network, sess, stats, lock, eval_lock
+    global stop_requested, global_step, increase_global_step, target_network, online_network, evaluation_network, sess, stats, lock, eval_lock
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
@@ -245,17 +245,18 @@ def worker_thread(thread_index, local_game_state):
 
             # Update counters and values
             local_step += 1
-            global_step += 1
+            g_step = sess.run(increase_global_step)
+
             if global_step % settings.evaluation_frequency == 0:
                 run_eval = True
-                at_step = global_step
+                at_step = g_step
 
             # Update target network on I_target
-            if global_step % settings.target_network_update == 0:
+            if g_step % settings.target_network_update == 0:
                 if not lock.acquire(False):
                     try:
                         sess.run(target_network.sync_variables_from(online_network))
-                        print 'Thread {} updated target network on step: {}'.format(thread_index, global_step)
+                        print 'Thread {} updated target network on step: {}'.format(thread_index, g_step)
                     finally:
                         lock.release()
 
@@ -265,7 +266,7 @@ def worker_thread(thread_index, local_game_state):
                 # Measure accuracy of the network given the batches
                 acc = online_network.get_accuracy(sess, state_batch, y_batch)
                 # Train online network with gradient batches
-                learning_rate = anneal_learning_rate(global_step)
+                learning_rate = anneal_learning_rate(g_step)
                 loss = online_network.train(sess, state_batch, action_batch, y_batch, learning_rate)
 
                 # Save values for stats
@@ -286,7 +287,7 @@ def worker_thread(thread_index, local_game_state):
           
             if terminal:
                 print 'Thread: {}  /  Global step: {}  /  Local steps: {}  /  Reward: {}  /  Qmax: {}  /  Epsilon: {}'.format(str(thread_index).zfill(2), 
-                    global_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'), format(np.average(epsilon_arr), '.2f'))
+                    g_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'), format(np.average(epsilon_arr), '.2f'))
 
                 # Update stats
                 if settings.save_stats:
@@ -302,7 +303,8 @@ def worker_thread(thread_index, local_game_state):
             if stop_requested:
                 break
 
-global_step = 0
+global_step = tf.Variable(0, name='global_step', trainable=False)
+increase_global_step = global_step.assign_add(1, use_locking=True)
 stop_requested = False
 
 if settings.use_gpu:

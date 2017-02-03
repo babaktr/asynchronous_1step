@@ -52,8 +52,14 @@ class GameState(object):
         if self.display:
             self.game.render()
 
-        x_t1_raw, reward, terminal, info = self.game.step(action+self.action_shift)
-        #x_t1_raw = self.game.render(mode='rgb_array') # TODO: Keep?
+        skip = 3
+        accum_reward = 0
+        for n in range (3):
+            x_t1_raw, accum_reward, terminal, info = self.game.step(action+self.action_shift)
+            reward += accum_reward
+            if terminal:
+                break
+            #x_t1_raw = self.game.render(mode='rgb_array') # TODO: Keep?
         x_t1 = self.process_frame(x_t1_raw)
         
         if False: # TODO: Keep?
