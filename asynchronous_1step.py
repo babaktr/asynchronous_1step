@@ -201,18 +201,18 @@ def worker_thread(thread_index, local_game_state):
         terminal = False
         run_eval = False
 
-        # Get initial game observation
+        # Get initial game state (s_t)
         state = local_game_state.reset()
 
         while not terminal:
-            # Get the Q-values of the current state
+            # Get the Q-values of the current state (s_t)
             q_values = online_network.predict(sess, [state])
 
-            # Anneal epsilon and select action
+            # Anneal epsilon and select action (a_t)
             epsilon = anneal_epsilon(epsilon, final_epsilon, global_step)
             action = select_action(epsilon, q_values, local_game_state.action_size)
             
-            # Make action an observe 
+            # Make action (a_t) an observe (s_t1)
             new_state, reward, terminal = local_game_state.step(action)
             
             # Get the new state's Q-values
