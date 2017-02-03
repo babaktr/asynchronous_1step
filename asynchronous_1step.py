@@ -128,6 +128,18 @@ def signal_handler(signal, frame):
     print 'You pressed Ctrl+C!'
     stop_requested = True
 
+def push_stats_updates(stats, loss_arr, acc_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, global_step):
+    stats.update({'loss': np.average(loss_arr), 
+                                'accuracy': np.average(acc_arr),
+                                'learning_rate': learning_rate,
+                                'qmax': np.average(q_max_arr),
+                                'epsilon': np.average(epsilon_arr),
+                                'episode_actions': action_arr,
+                                'reward': np.sum(reward_arr),
+                                'steps': local_step,
+                                'step': global_step
+                                }) 
+
 '''
 Runs evaluation of the current network.
 '''
@@ -278,16 +290,7 @@ def worker_thread(thread_index, local_game_state):
 
                 # Update stats
                 if settings.save_stats:
-                    stats.update({'loss': np.average(loss_arr), 
-                                'accuracy': np.average(acc_arr),
-                                'learning_rate': learning_rate,
-                                'qmax': np.average(q_max_arr),
-                                'epsilon': np.average(epsilon_arr),
-                                'episode_actions': action_arr,
-                                'reward': np.sum(reward_arr),
-                                'steps': local_step,
-                                'step': global_step
-                                }) 
+                    push_stats_updates(stats, loss_arr, acc_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, global_step)
 
                 # Reset stats
                 action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr =  [], [], [], [], [], []
