@@ -184,6 +184,7 @@ def worker_thread(thread_index, local_game_state):
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
     epsilon = 1.0
+    g_step = sess.run(global_step)
 
     # Prepare gradiets
     y_batch, state_batch, action_batch = [], [], []
