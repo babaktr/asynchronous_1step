@@ -172,7 +172,7 @@ def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_ste
                         'steps': np.average(step_arr),
                         'step': at_step
                         }) 
-    print ' >>>>>>Evaluation done.'
+    print '>>>>>> Evaluation done.'
 
 
 '''
@@ -253,7 +253,7 @@ def worker_thread(thread_index, local_game_state):
 
             # Update target network on I_target
             if g_step % settings.target_network_update == 0:
-                if not lock.acquire(False):
+                if lock.acquire(False):
                     try:
                         sess.run(target_network.sync_variables_from(online_network))
                         print 'Thread {} updated target network on step: {}'.format(thread_index, g_step)
@@ -278,7 +278,7 @@ def worker_thread(thread_index, local_game_state):
                 y_batch, state_batch, action_batch = [], [], []
 
             if run_eval and settings.evaluate:
-                if not eval_lock.acquire(False):
+                if eval_lock.acquire(False):
                     try:
                         sess.run(evaluation_network.sync_variables_from(online_network))
                         run_evaluation(sess, evaluation_network, stats, local_game_state, settings.evaluation_episodes, at_step)

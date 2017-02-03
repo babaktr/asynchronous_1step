@@ -53,10 +53,10 @@ class GameState(object):
             self.game.render()
 
         skip = 3
-        accum_reward = 0
+        reward = 0
         for n in range (3):
-            x_t1_raw, accum_reward, terminal, info = self.game.step(action+self.action_shift)
-            reward += accum_reward
+            x_t1_raw, r, terminal, info = self.game.step(action+self.action_shift)
+            reward += r
             if terminal:
                 break
             #x_t1_raw = self.game.render(mode='rgb_array') # TODO: Keep?
