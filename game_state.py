@@ -54,7 +54,7 @@ class GameState(object):
 
         skip = 3
         reward = 0
-        for n in range (3):
+        for n in range (4):
             x_t1_raw, r, terminal, info = self.game.step(action+self.action_shift)
             reward += r
             if terminal:

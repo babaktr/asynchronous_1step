@@ -184,7 +184,6 @@ def worker_thread(thread_index, local_game_state):
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
     epsilon = 1.0
-    g_step = sess.run(global_step)
 
     # Prepare gradiets
     y_batch, state_batch, action_batch = [], [], []
@@ -193,10 +192,11 @@ def worker_thread(thread_index, local_game_state):
     action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = [], [], [], [], [], []
 
     time.sleep(0.5*thread_index)
+    g_step = sess.run(global_step)
     print("Starting agent " + str(thread_index) + " with final epsilon: " + str(final_epsilon))
 
     local_step = 0
-    while global_step < settings.global_max_steps and not stop_requested:
+    while g_step < settings.global_max_steps and not stop_requested:
         # Reset counters and values
         local_step = 0
         terminal = False
@@ -210,7 +210,7 @@ def worker_thread(thread_index, local_game_state):
             q_values = online_network.predict(sess, [state])
 
             # Anneal epsilon and select action (a_t)
-            epsilon = anneal_epsilon(epsilon, final_epsilon, global_step)
+            epsilon = anneal_epsilon(epsilon, final_epsilon, g_step)
             action = select_action(epsilon, q_values, local_game_state.action_size)
             
             # Make action (a_t) an observe (s_t1)
@@ -248,7 +248,7 @@ def worker_thread(thread_index, local_game_state):
             local_step += 1
             g_step = sess.run(increase_global_step)
 
-            if global_step % settings.evaluation_frequency == 0:
+            if g_step % settings.evaluation_frequency == 0:
                 run_eval = True
                 at_step = g_step
 
@@ -292,7 +292,7 @@ def worker_thread(thread_index, local_game_state):
 
                 # Update stats
                 if settings.save_stats:
-                    push_stats_updates(stats, loss_arr, acc_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, global_step)
+                    push_stats_updates(stats, loss_arr, acc_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
 
                 # Reset stats
                 action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr =  [], [], [], [], [], []
@@ -379,7 +379,8 @@ wall_t = 0
 if settings.load_checkpoint:
     checkpoint_dir = './checkpoints/{}/'.format(experiment_name)
     saver = tf.train.Saver(max_to_keep=1)
-    wall_t, global_step = load_checkpoint(sess, saver, checkpoint_dir)
+    wall_t, g_step = load_checkpoint(sess, saver, checkpoint_dir)
+    sess.run(global_step.assign(g_step))
 
 # Prepare parallel workers
 workers = []
@@ -410,10 +411,11 @@ if settings.save_checkpoint:
     if not os.path.exists(checkpoint_dir):
         os.mkdir(checkpoint_dir)  
 
+    g_step = sess.run(global_step)
     # write wall time
     wall_t = time.time() - start_time
-    wall_t_fname = checkpoint_dir + '/' + 'wall_t.' + str(global_step)
+    wall_t_fname = checkpoint_dir + '/' + 'wall_t.' + str(g_step)
     with open(wall_t_fname, 'w') as f:
         f.write(str(wall_t))
 
-    saver.save(sess, checkpoint_dir + '/' 'checkpoint', global_step = global_step)
+    saver.save(sess, checkpoint_dir + '/' 'checkpoint', global_step=g_step)
