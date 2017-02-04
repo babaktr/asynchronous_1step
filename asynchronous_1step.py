@@ -249,10 +249,6 @@ def worker_thread(thread_index, local_game_state):
             local_step += 1
             g_step = sess.run(increase_global_step)
 
-            if g_step % settings.evaluation_frequency == 0:
-                run_eval = True
-                at_step = g_step
-
             # Update target network on I_target
             if g_step % settings.target_network_update == 0:
                 if lock.acquire(False):
@@ -279,11 +275,11 @@ def worker_thread(thread_index, local_game_state):
                 # Clear gradients
                 y_batch, state_batch, action_batch = [], [], []
 
-            if run_eval and settings.evaluate:
+            if g_step % settings.evaluation_frequency == 0 and settings.evaluate:
                 if eval_lock.acquire(False):
                     try:
                         sess.run(evaluation_network.sync_variables_from(online_network))
-                        run_evaluation(sess, evaluation_network, stats, local_game_state, settings.evaluation_episodes, at_step)
+                        run_evaluation(sess, evaluation_network, stats, local_game_state, settings.evaluation_episodes, g_step)
                     finally:
                         eval_lock.release()
           
