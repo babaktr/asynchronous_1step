@@ -17,6 +17,8 @@ flags.DEFINE_string('game', 'Breakout-v0', 'What game to play.')
 flags.DEFINE_boolean('load_checkpoint', True, 'If it should load from available checkpoints.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 flags.DEFINE_boolean('log', False, 'For a verbose log.')
+flags.DEFINE_integer('frame_skip', 3, 'How many frames to skip (or actions to repeat) for each step.')
+
 
 flags.DEFINE_integer('global_max_steps', 80000000, 'Set this to the same as in your experiment.')
 
@@ -114,7 +116,7 @@ def play(game_state):
             
             # Make action an observe 
             new_state, reward, terminal = game_state.step(action)
-            
+            time.sleep(0.07)
             # Get the new state's Q-values
             #q_values_new = target_network.predict(sess, [new_state])
 
@@ -210,19 +212,18 @@ else:
 game_state = GameState(settings.random_seed, 
                     settings.log, 
                     settings.game, 
-                    display)
+                    display,
+                    settings.frame_skip)
 
 # Prepare online network
 game = game_state
-online_network = DeepQNetwork(1, 
-                            'online_network',
+online_network = DeepQNetwork('online_network',
                             device, 
                             settings.random_seed, 
                             game.action_size)
 
 # Set target Deep Q Network
-target_network = DeepQNetwork(-1, 
-                            'target_network',
+target_network = DeepQNetwork('target_network',
                             device, 
                             settings.random_seed, 
                             game.action_size)
