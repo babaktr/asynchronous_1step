@@ -275,17 +275,13 @@ def worker_thread(thread_index, local_game_state):
                 # Clear gradients
                 y_batch, state_batch, action_batch = [], [], []
 
-            if g_step % settings.evaluation_frequency == 0 and settings.evaluate:
+            if g_step % settings.evaluation_frequency and settings.evaluate:
                 if eval_lock.acquire(False):
                     try:
-                        lock.acquire()
+                        sess.run(evaluation_network.sync_variables_from(online_network))
+                        run_evaluation(sess, evaluation_network, stats, local_game_state, settings.evaluation_episodes, g_step)
                     finally:
-                        lock.release()
-                        try:
-                            sess.run(evaluation_network.sync_variables_from(online_network))
-                            run_evaluation(sess, evaluation_network, stats, local_game_state, settings.evaluation_episodes, g_step)
-                        finally:
-                            eval_lock.release()
+                        eval_lock.release()
           
             if terminal:
                 print 'Thread: {}  /  Global step: {}  /  Local steps: {}  /  Reward: {}  /  Qmax: {}  /  Epsilon: {}'.format(str(thread_index).zfill(2), 
