@@ -66,6 +66,8 @@ while global_step > global_max_steps do
 * ```global_max_steps``` - ```80 000 000``` - Maximum training steps.
 * ```local_max_steps``` - ```5``` - Frequency with which each agent network is updated (```I_target```).
 * ```target_network_update``` - ```10 000``` - Frequency with which the shared target network is updated (```I_AsyncUpdate```).
+* ```frame_skip``` -  ```3``` - How many frames to skip (or actions to repeat) for each step.
+
 
 #### Method settings
 * ```method``` - ```q``` - Training algorithm to use ```[q, sarsa]```. Defaults to Q-learning.
