@@ -6,10 +6,11 @@ import time
 import gym
 
 class GameState(object):
-    def __init__(self, random_seed, log, game, display):
+    def __init__(self, random_seed, log, game, display, frame_skip):
         np.random.seed(random_seed)
         self.log = log
         self.display = display
+        self.frame_skip = frame_skip
 
         # Load game environment
         self.game = gym.make(game)
@@ -52,14 +53,14 @@ class GameState(object):
         if self.display:
             self.game.render()
 
-        skip = 3
-        reward = 0
-        for n in range (4):
+        accum_reward = 0
+        for n in range (self.frame_skip+1):
             x_t1_raw, r, terminal, info = self.game.step(action+self.action_shift)
-            reward += r
+            accum_reward += r
             if terminal:
                 break
-            #x_t1_raw = self.game.render(mode='rgb_array') # TODO: Keep?
+
+        reward = accum_reward
         x_t1 = self.process_frame(x_t1_raw)
         
         if False: # TODO: Keep?

@@ -68,7 +68,7 @@ while global_step > global_max_steps do
 * ```target_network_update``` - ```10 000``` - Frequency with which the shared target network is updated (```I_AsyncUpdate```).
 
 #### Method settings
-* ```method``` - ```q``` - Training algorithm to use [q, sarsa]. Defaults to Q-learning.
+* ```method``` - ```q``` - Training algorithm to use ```[q, sarsa]```. Defaults to Q-learning.
 * ```gamma``` - ```0.99``` - Discount factor for rewards.
 * ```epsilon_anneal``` - ```1 000 000``` - Number of steps to anneal epsilon.
 
@@ -78,3 +78,8 @@ while global_step > global_max_steps do
 * ```rms_epsilon``` - ```0.1``` RMSProp epsilon parameter.
 * ```learning_rate``` - ```0.0007``` - Initial learning rate.
 * ```anneal_learning_rate``` - ```True``` - If learning rate should be annealed over global max steps.
+
+#### Evaluation settings
+* ```evaluate``` - ```True``` - If it should run continous evaluation throughout the training session.
+* ```evaluation_episodes``` - ```10``` - How many evaluation episodes to run (and average the evaluation over).
+* ```evaluation_frequency``` - ```100 000``` - The frequency of evaluation runs.
