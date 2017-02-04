@@ -329,40 +329,19 @@ for n in range(settings.parallel_agents):
 
 # Prepare online network
 game = local_game_states[0]
-online_network = DeepQNetwork(0, 
-                            'online_network',
-                            device, 
-                            settings.random_seed, 
-                            game.action_size, 
+online_network = DeepQNetwork('online_network', device, settings.random_seed, game.action_size, 
                             initial_learning_rate=settings.learning_rate, 
                             optimizer=settings.optimizer,
                             rms_decay=settings.rms_decay,
                             rms_epsilon=settings.rms_epsilon)
 
 # Set target Deep Q Network
-target_network = DeepQNetwork(1, 
-                            'target_network',
-                            device, 
-                            settings.random_seed, 
-                            game.action_size,
-                            initial_learning_rate=settings.learning_rate, 
-                            optimizer=settings.optimizer,
-                            rms_decay=settings.rms_decay,
-                            rms_epsilon=settings.rms_epsilon)
+target_network = DeepQNetwork('target_network', device, settings.random_seed, game.action_size)
 
 
-evaluation_network = DeepQNetwork(-1, 
-                            'evaluation_network',
-                            device, 
-                            settings.random_seed, 
-                            game.action_size,
-                            initial_learning_rate=settings.learning_rate, 
-                            optimizer=settings.optimizer,
-                            rms_decay=settings.rms_decay,
-                            rms_epsilon=settings.rms_epsilon)
+evaluation_network = DeepQNetwork('evaluation_network', device, settings.random_seed, game.action_size)
 
-sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
-                                        allow_soft_placement=True))
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=True))
 
 experiment_name = 'asynchronous-1step-{}_game-{}_global-max-{}'.format(settings.method, 
     settings.game, settings.global_max_steps)

@@ -33,7 +33,7 @@ class DeepQNetwork(object):
         return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], 
                             padding='VALID')
 
-    def __init__(self, index, name, device, random_seed, action_size, initial_learning_rate=0, optimizer='rmsprop', rms_decay=0, rms_epsilon=0):
+    def __init__(self, name, device, random_seed, action_size, initial_learning_rate=0.0007, optimizer='rmsprop', rms_decay=0.99, rms_epsilon=0.1):
         self.device = device
 
         with tf.device(self.device) and tf.name_scope(name) as scope:
