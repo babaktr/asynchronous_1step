@@ -24,7 +24,7 @@ flags.DEFINE_integer('global_max_steps', 80000000, 'Set this to the same as in y
 
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
-flags.DEFINE_float('epsilon', 0.05, 'Which epsilon to run with.')
+flags.DEFINE_float('epsilon', 0.01, 'Which epsilon to run with.')
 
 settings = flags.FLAGS
 
@@ -113,10 +113,11 @@ def play(game_state):
             q_values = online_network.predict(sess, [state])
 
             action = select_action(settings.epsilon, q_values, game_state.action_size)
+
+            time.sleep(0.08)
             
             # Make action an observe 
             new_state, reward, terminal = game_state.step(action)
-            time.sleep(0.07)
             # Get the new state's Q-values
             #q_values_new = target_network.predict(sess, [new_state])
 
