@@ -302,8 +302,11 @@ def worker_thread(thread_index, local_game_state):
             if stop_requested:
                 break
 
-global_step = tf.Variable(0, name='global_step', trainable=False)
-increase_global_step = global_step.assign_add(1, use_locking=True)
+with tf.name_scope('global_step_counter') as cope:
+    global_step = tf.Variable(0, name='global_step', trainable=False)
+    with tf.name_scope('increase_global_step') as scope:
+        increase_global_step = global_step.assign_add(1, use_locking=True)
+
 stop_requested = False
 
 if settings.use_gpu:

@@ -17,7 +17,7 @@ flags.DEFINE_string('game', 'Breakout-v0', 'What game to play.')
 flags.DEFINE_boolean('load_checkpoint', True, 'If it should load from available checkpoints.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 flags.DEFINE_boolean('log', False, 'For a verbose log.')
-flags.DEFINE_integer('frame_skip', 3, 'How many frames to skip (or actions to repeat) for each step.')
+flags.DEFINE_integer('frame_skip', 2, 'How many frames to skip (or actions to repeat) for each step.')
 
 
 flags.DEFINE_integer('global_max_steps', 80000000, 'Set this to the same as in your experiment.')
@@ -114,7 +114,7 @@ def play(game_state):
 
             action = select_action(settings.epsilon, q_values, game_state.action_size)
 
-            time.sleep(0.08)
+            time.sleep(0.8)
             
             # Make action an observe 
             new_state, reward, terminal = game_state.step(action)
@@ -143,7 +143,7 @@ def visualize(game_state):
 
     state = game_state.reset()
 
-    for n in range(40):
+    for n in range(10):
         state, _, _ = game.step(0)
 
     x_t = game.x_t

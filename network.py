@@ -40,14 +40,15 @@ class DeepQNetwork(object):
             # Set random seed
             tf.set_random_seed(random_seed)
 
-            # Action input batch with shape [?, action_size]
-            self.a = tf.placeholder(tf.float32, [None, action_size], name='action-input')
+            with tf.name_scope('input') as scope:
+                # Action input batch with shape [?, action_size]
+                self.a = tf.placeholder(tf.float32, [None, action_size], name='action-input')
 
-            # State input batch with shape [?, 84, 84, 4]
-            self.s = tf.placeholder(tf.float32, shape=[None, 84, 84, 4], name='s-input')
+                # State input batch with shape [?, 84, 84, 4]
+                self.s = tf.placeholder(tf.float32, shape=[None, 84, 84, 4], name='s-input')
 
-            # Target Q-value batch with shape [?, 1]
-            self.y = tf.placeholder(tf.float32, shape=[None, 1], name='target-q_value')
+                # Target Q-value batch with shape [?, 1]
+                self.y = tf.placeholder(tf.float32, shape=[None, 1], name='target-q_value')
 
             # Convolutional layer 1 weights and bias with stride=4
             # Produces 16 19x19 outputs
@@ -102,8 +103,9 @@ class DeepQNetwork(object):
                     # RMSProp
                     self.optimizer_function = tf.train.RMSPropOptimizer(initial_learning_rate, decay=rms_decay, epsilon=rms_epsilon)
 
-                target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
-                self.loss_function = tf.reduce_mean(tf.square(tf.subtract(self.y, target_q_value)))
+                with tf.name_scope('loss'):
+                    target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
+                    self.loss_function = tf.reduce_mean(tf.square(tf.subtract(self.y, target_q_value)))
 
                 with tf.name_scope('gradient_clipping') as scope:
                     # Compute gradients w.r.t. weights
