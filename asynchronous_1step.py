@@ -168,12 +168,13 @@ def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_ste
             else:
                 state = new_state
                 game_state.update_state()
-
-    stats.update_eval({'rewards': np.average(reward_arr), 
-                        'steps': np.average(step_arr),
+    r_avg = np.average(reward_arr)
+    s_avg = np.average(step_arr)
+    stats.update_eval({'rewards': np.average(r_avg), 
+                        'steps': np.average(s_avg),
                         'step': at_step
                         }) 
-    print '>>>>>> Evaluation done.'
+    print '>>>>>> Evaluation done with average reward: {}, step {}.'.format(r_avg, s_avg)
 
 
 '''
