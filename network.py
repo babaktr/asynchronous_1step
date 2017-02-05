@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 '''
 Network structure from "Playing Atari with Deep Reinforcement Learning" by Mnih et al., 2013 
@@ -33,12 +34,18 @@ class DeepQNetwork(object):
         return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], 
                             padding='VALID')
 
-    def __init__(self, name, device, random_seed, action_size, initial_learning_rate=0.0007, optimizer='rmsprop', rms_decay=0.99, rms_epsilon=0.1):
+    def __init__(self, name, device, random_seed, action_size, batch_size=5, initial_learning_rate=0.0007, optimizer='rmsprop', rms_decay=0.99, rms_epsilon=0.1):
         self.device = device
 
         with tf.device(self.device) and tf.name_scope(name) as scope:
             # Set random seed
             tf.set_random_seed(random_seed)
+
+            self.a_batch = []
+            self.s_batch = []
+            self.y_batch = []
+            self.batch_size = batch_size
+            self.loss_value = 0
 
             with tf.name_scope('input') as scope:
                 # Action input batch with shape [?, action_size]
@@ -113,7 +120,7 @@ class DeepQNetwork(object):
                     gradients = tf.gradients(self.loss_function, variables)
                     with tf.name_scope('clipped_gradients') as scope:
                         # Apply gradient norm clipping
-                        gradients, _ = tf.clip_by_global_norm(gradients, 40.)
+                        gradients, _ = tf.clip_by_global_norm(gradients, 40.0)
                         gradient_variables = list(zip(gradients, variables))
                     with tf.name_scope('training_op') as scope:
                         self.train_op = self.optimizer_function.apply_gradients(gradient_variables)
@@ -137,6 +144,15 @@ class DeepQNetwork(object):
                                                 self.a: a_input,
                                                 self.y: target_output})
             return loss
+
+    def accumulate_gradients(self, sess, s_input, a_input, y_input, learning_rate):
+        with tf.device(self.device):
+            self.s_batch.append(s_input)
+            self.a_batch.append(a_input)
+            self.y_batch.append(y_input)
+
+            if len(self.s_batch) == self.batch_size:
+                self.loss_value = self.train(sess, np.vstack(self.s_batch), np.vstack(self.a_batch), np.vstack(self.y_batch), learning_rate)
 
     '''
     Feeds a value through the network and produces an output.

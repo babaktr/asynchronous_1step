@@ -94,12 +94,6 @@ def onehot_vector(action, action_size):
     return vector
 
 '''
-Vertically stack batches to match network structure
-'''
-def stack_batches(state_batch, action_batch, y_batch):
-    return np.vstack(state_batch), np.vstack(action_batch), np.vstack(y_batch)
-
-'''
 Handles the loading any available checkpoint.
 '''
 def load_checkpoint(sess, saver, checkpoint_path):
@@ -129,17 +123,16 @@ def signal_handler(signal, frame):
     print 'You pressed Ctrl+C!'
     stop_requested = True
 
-def push_stats_updates(stats, loss_arr, acc_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, global_step):
-    stats.update({'loss': np.average(loss_arr), 
-                                'accuracy': np.average(acc_arr),
-                                'learning_rate': learning_rate,
-                                'qmax': np.average(q_max_arr),
-                                'epsilon': np.average(epsilon_arr),
-                                'episode_actions': action_arr,
-                                'reward': np.sum(reward_arr),
-                                'steps': local_step,
-                                'step': global_step
-                                }) 
+def push_stats_updates(stats, loss, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, global_step):
+    stats.update({'loss': loss, 
+                'learning_rate': learning_rate,
+                'qmax': np.average(q_max_arr),
+                'epsilon': np.average(epsilon_arr),
+                'episode_actions': action_arr,
+                'reward': np.sum(reward_arr),
+                'steps': local_step,
+                'step': global_step
+                }) 
 
 '''
 Runs evaluation of the current network.
@@ -184,7 +177,7 @@ def worker_thread(thread_index, local_game_state):
     global stop_requested, global_step, increase_global_step, sess, stats   # General
     global target_network, online_network, evaluation_network               # Networks
     global lock, eval_lock                                                  # Locks
-    global y_batch, state_batch, action_batch                               # Gradient batches
+    global acc_arr, loss_arr                                                # Network stats
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
@@ -235,16 +228,16 @@ def worker_thread(thread_index, local_game_state):
             else:
                 # Terminal state, update using reward
                 update = reward
-
-            # Fill batch
-            y_batch.append([update])
-            state_batch.append([state])
-            action_batch.append(onehot_vector(action, local_game_state.action_size))
+         
+            learning_rate = anneal_learning_rate(g_step)
+            # Accumulate gradients for the online network
+            online_network.accumulate_gradients(sess, [state], onehot_vector(action, local_game_state.action_size), [update], learning_rate)
 
             # Save for stats
             reward_arr.append(reward)
             q_max_arr.append(np.max(q_values))
             action_arr.append(action)
+            epsilon_arr.append(epsilon)
 
             # Update counters and values
             local_step += 1
@@ -259,23 +252,6 @@ def worker_thread(thread_index, local_game_state):
                     finally:
                         lock.release()
 
-            # Update online network on I_AsyncUpdate
-            if len(state_batch) >= settings.local_max_steps == 0:
-                # Stack batches
-                stacked_state_batch, stacked_action_batch, stacked_y_batch = stack_batches(state_batch, action_batch, y_batch)
-                # Clear gradients
-                y_batch, state_batch, action_batch = [], [], []
-
-                # Measure accuracy of the network given the batches
-                acc = online_network.get_accuracy(sess, stacked_state_batch, stacked_y_batch)
-                # Train online network with gradient batches
-                learning_rate = anneal_learning_rate(g_step)
-                loss = online_network.train(sess, stacked_state_batch, stacked_action_batch, stacked_y_batch, learning_rate)
-
-                # Save values for stats
-                epsilon_arr.append(epsilon)
-                loss_arr.append(loss)
-                acc_arr.append(acc)
 
             if g_step % settings.evaluation_frequency and settings.evaluate:
                 if eval_lock.acquire(False):
@@ -286,13 +262,14 @@ def worker_thread(thread_index, local_game_state):
                         eval_lock.release()
           
             if terminal:
+                #print 'pushing stats'
                 print 'Thread: {}  /  Global step: {}  /  Local steps: {}  /  Reward: {}  /  Qmax: {}  /  Epsilon: {}'.format(str(thread_index).zfill(2), 
                     g_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'), format(np.average(epsilon_arr), '.2f'))
 
                 # Update stats
                 if settings.save_stats:
                     learning_rate = anneal_learning_rate(g_step)
-                    push_stats_updates(stats, loss_arr, acc_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
+                    push_stats_updates(stats, online_network.loss_value, 0, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
 
                 # Reset stats
                 action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr =  [], [], [], [], [], []
@@ -319,9 +296,10 @@ else:
 # Prepare locks
 lock = Lock()
 eval_lock = Lock()
+update_lock = Lock()
 
-# Prepare shared gradient batches
-y_batch, state_batch, action_batch = [], [], []
+# Prepare network stat savers
+acc_arr, loss_arr = [], []
 
 # Prepare game environments
 local_game_states = []
@@ -338,6 +316,7 @@ game = local_game_states[0]
 
 # Prepare online network
 online_network = DeepQNetwork('online_network', device, settings.random_seed, game.action_size, 
+                            batch_size=settings.local_max_steps,
                             initial_learning_rate=settings.learning_rate, 
                             optimizer=settings.optimizer,
                             rms_decay=settings.rms_decay,
