@@ -23,8 +23,8 @@ class DeepQNetwork(object):
     Set up bias variable.
     '''
     def bias_variable(self, shape, name):
-        initializer = tf.constant(0.0, shape=shape)
-        return tf.Variable(initializer, name=name)
+        init_value = tf.constant(0.0, shape=shape)
+        return tf.Variable(init_value, name=name)
 
     '''
     Set up 2D convolution.
