@@ -26,11 +26,11 @@ flags.DEFINE_boolean('display', False, 'If it you want to render the game.')
 flags.DEFINE_boolean('log', False, 'For a verbose log.')
 
 # Training settings
-flags.DEFINE_integer('parallel_agents', 8, 'Number of asynchronous agents (threads) to train with.')
+flags.DEFINE_integer('parallel_agents', 16, 'Number of asynchronous agents (threads) to train with.')
 flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps.')
 flags.DEFINE_integer('local_max_steps', 5, 'Frequency with which each agent network is updated (I_target).')
 flags.DEFINE_integer('target_network_update', 10000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
-flags.DEFINE_integer('frame_skip', 3, 'How many frames to skip (or actions to repeat) for each step.')
+flags.DEFINE_integer('frame_skip', 2, 'How many frames to skip (or actions to repeat) for each step.')
 
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
