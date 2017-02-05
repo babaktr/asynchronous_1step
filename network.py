@@ -41,21 +41,24 @@ class DeepQNetwork(object):
             # Set random seed
             tf.set_random_seed(random_seed)
 
-            self.a_batch = []
-            self.s_batch = []
-            self.y_batch = []
+            self.a_array = []
+            self.s_array = []
+            self.y_array = []
             self.batch_size = batch_size
             self.loss_value = 0
 
             with tf.name_scope('input') as scope:
                 # Action input batch with shape [?, action_size]
                 self.a = tf.placeholder(tf.float32, [None, action_size], name='action-input')
+                self.a_batch = tf.placeholder(tf.float32, [5, action_size], name='action-batch')
 
                 # State input batch with shape [?, 84, 84, 4]
                 self.s = tf.placeholder(tf.float32, shape=[None, 84, 84, 4], name='s-input')
+                self.s_batch = tf.placeholder(tf.float32, shape=[5, 84, 84, 4], name='s-batch')
 
                 # Target Q-value batch with shape [?, 1]
                 self.y = tf.placeholder(tf.float32, shape=[None, 1], name='target-q_value')
+                self.y_batch = tf.placeholder(tf.float32, shape=[5, 1], name='y-batch')
 
             # Convolutional layer 1 weights and bias with stride=4
             # Produces 16 19x19 outputs
@@ -139,20 +142,34 @@ class DeepQNetwork(object):
     def train(self, sess, s_input, a_input, target_output, learn_rate):
         with tf.device(self.device):
             self.optimizer_function.learn_rate = learn_rate
-            _, loss = sess.run([self.train_op, self.loss_function],
-                                    feed_dict={self.s: s_input,
-                                                self.a: a_input,
-                                                self.y: target_output})
+            _, loss = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: target_output})
             return loss
 
-    def accumulate_gradients(self, sess, s_input, a_input, y_input, learning_rate):
+    def accumulate_gradients(self, sess, s_input, a_input, y_input, learn_rate):
         with tf.device(self.device):
-            self.s_batch.append(s_input)
-            self.a_batch.append(a_input)
-            self.y_batch.append(y_input)
+            self.s_array.append(s_input)
+            self.a_array.append(a_input)
+            self.y_array.append(y_input)
 
-            if len(self.s_batch) == self.batch_size:
-                self.loss_value = self.train(sess, np.vstack(self.s_batch), np.vstack(self.a_batch), np.vstack(self.y_batch), learning_rate)
+            if len(self.s_array) == self.batch_size:
+                #a = np.vstack(self.s_array)
+                #print self.s_batch
+                #print a.shape
+                #ops = []
+                #s_op = tf.assign(self.s_batch, np.vstack(self.s_array))
+                #a_op = tf.assign(self.a_batch, np.vstack(self.a_array))
+                #y_op = tf.assign(self.y_batch, np.vstack(self.y_array))
+                #ops.append(s)
+                #ops.append(a)
+                #ops.append(y)
+
+                #ops.append(self.train(sess, self.s_batch, self.a_batch, self.y_batch, learning_rate))
+                #ops.append(tf.assign(self.optimizer_function.learn_rate, learn_rate))
+                #ops.append(self.train_op)
+                #tf.group(*ops)
+                #self.s_array, self.a_array, self.y_array = [], [], []
+                self.loss_value = self.train(sess, np.vstack(self.s_array), np.vstack(self.a_array), np.vstack(self.y_array), learn_rate)
+                self.s_array, self.a_array, self.y_array = [], [], []
 
     '''
     Feeds a value through the network and produces an output.

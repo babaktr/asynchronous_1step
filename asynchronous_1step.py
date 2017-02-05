@@ -30,7 +30,7 @@ flags.DEFINE_integer('parallel_agents', 16, 'Number of asynchronous agents (thre
 flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps.')
 flags.DEFINE_integer('local_max_steps', 5, 'Frequency with which each agent network is updated (I_target).')
 flags.DEFINE_integer('target_network_update', 10000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
-flags.DEFINE_integer('frame_skip', 2, 'How many frames to skip (or actions to repeat) for each step.')
+flags.DEFINE_integer('frame_skip', 0, 'How many frames to skip (or actions to repeat) for each step.')
 
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
@@ -123,7 +123,7 @@ def signal_handler(signal, frame):
     print 'You pressed Ctrl+C!'
     stop_requested = True
 
-def push_stats_updates(stats, loss, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, global_step):
+def push_stats_updates(stats, loss, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, l_step, g_step):
     stats.update({'loss': loss, 
                 'learning_rate': learning_rate,
                 'accuracy': 0,
@@ -131,8 +131,8 @@ def push_stats_updates(stats, loss, learning_rate, q_max_arr, epsilon_arr, actio
                 'epsilon': np.average(epsilon_arr),
                 'episode_actions': action_arr,
                 'reward': np.sum(reward_arr),
-                'steps': local_step,
-                'step': global_step
+                'steps': l_step,
+                'step': g_step
                 }) 
 
 '''
@@ -177,7 +177,7 @@ Worker thread that runs an agent training in a local game enviroment.
 def worker_thread(thread_index, local_game_state): 
     global stop_requested, global_step, increase_global_step, sess, stats   # General
     global target_network, online_network, evaluation_network               # Networks
-    global lock, eval_lock                                                  # Locks
+    global lock, eval_lock, update_lock                                                  # Locks
     global acc_arr, loss_arr                                                # Network stats
 
     # Set worker's initial and final epsilons
@@ -232,12 +232,18 @@ def worker_thread(thread_index, local_game_state):
          
             learning_rate = anneal_learning_rate(g_step)
             # Accumulate gradients for the online network
-            online_network.accumulate_gradients(sess, [state], onehot_vector(action, local_game_state.action_size), [update], learning_rate)
+            onehot_action = onehot_vector(action, local_game_state.action_size)            
+            update_lock.acquire()
+            try:
+                online_network.accumulate_gradients(sess, [state], onehot_action, [update], learning_rate)
+            finally:
+                update_lock.release()
 
             # Save for stats
+            action_arr.append(action)
             reward_arr.append(reward)
             q_max_arr.append(np.max(q_values))
-            action_arr.append(action)
+            
             epsilon_arr.append(epsilon)
 
             # Update counters and values
