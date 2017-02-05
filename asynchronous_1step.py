@@ -269,7 +269,7 @@ def worker_thread(thread_index, local_game_state):
                 # Update stats
                 if settings.save_stats:
                     learning_rate = anneal_learning_rate(g_step)
-                    push_stats_updates(stats, online_network.loss_value, 0, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
+                    push_stats_updates(stats, online_network.loss_value, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
 
                 # Reset stats
                 action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr =  [], [], [], [], [], []
