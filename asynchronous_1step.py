@@ -126,6 +126,7 @@ def signal_handler(signal, frame):
 def push_stats_updates(stats, loss, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, global_step):
     stats.update({'loss': loss, 
                 'learning_rate': learning_rate,
+                'accuracy': 0,
                 'qmax': np.average(q_max_arr),
                 'epsilon': np.average(epsilon_arr),
                 'episode_actions': action_arr,
