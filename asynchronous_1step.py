@@ -260,7 +260,7 @@ def worker_thread(thread_index, local_game_state):
                         lock.release()
 
             # Update online network on I_AsyncUpdate
-            if g_step % settings.local_max_steps == 0:
+            if len(state_batch) >= settings.local_max_steps == 0:
                 # Stack batches
                 stacked_state_batch, stacked_action_batch, stacked_y_batch = stack_batches(state_batch, action_batch, y_batch)
                 # Clear gradients
@@ -291,6 +291,7 @@ def worker_thread(thread_index, local_game_state):
 
                 # Update stats
                 if settings.save_stats:
+                    learning_rate = anneal_learning_rate(g_step)
                     push_stats_updates(stats, loss_arr, acc_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
 
                 # Reset stats
