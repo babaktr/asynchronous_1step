@@ -181,16 +181,14 @@ def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_ste
 Worker thread that runs an agent training in a local game enviroment.
 '''
 def worker_thread(thread_index, local_game_state): 
-    global stop_requested, global_step, increase_global_step, sess, stats # General
-    global target_network, online_network, evaluation_network # Networks
-    global lock, eval_lock # Locks
+    global stop_requested, global_step, increase_global_step, sess, stats   # General
+    global target_network, online_network, evaluation_network               # Networks
+    global lock, eval_lock                                                  # Locks
+    global y_batch, state_batch, action_batch                               # Gradient batches
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
     epsilon = 1.0
-
-    # Prepare gradiets
-    y_batch, state_batch, action_batch = [], [], []
 
     # Prepare stats
     action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = [], [], [], [], [], []
@@ -262,21 +260,22 @@ def worker_thread(thread_index, local_game_state):
                         lock.release()
 
             # Update online network on I_AsyncUpdate
-            if local_step % settings.local_max_steps == 0 or terminal:
-                state_batch, action_batch, y_batch = stack_batches(state_batch, action_batch, y_batch)
+            if g_step % settings.local_max_steps == 0:
+                # Stack batches
+                stacked_state_batch, stacked_action_batch, stacked_y_batch = stack_batches(state_batch, action_batch, y_batch)
+                # Clear gradients
+                y_batch, state_batch, action_batch = [], [], []
+
                 # Measure accuracy of the network given the batches
-                acc = online_network.get_accuracy(sess, state_batch, y_batch)
+                acc = online_network.get_accuracy(sess, stacked_state_batch, stacked_y_batch)
                 # Train online network with gradient batches
                 learning_rate = anneal_learning_rate(g_step)
-                loss = online_network.train(sess, state_batch, action_batch, y_batch, learning_rate)
+                loss = online_network.train(sess, stacked_state_batch, stacked_action_batch, stacked_y_batch, learning_rate)
 
                 # Save values for stats
                 epsilon_arr.append(epsilon)
                 loss_arr.append(loss)
                 acc_arr.append(acc)
-
-                # Clear gradients
-                y_batch, state_batch, action_batch = [], [], []
 
             if g_step % settings.evaluation_frequency and settings.evaluate:
                 if eval_lock.acquire(False):
@@ -316,8 +315,12 @@ if settings.use_gpu:
 else:
     device = '/cpu:0'
 
+# Prepare locks
 lock = Lock()
 eval_lock = Lock()
+
+# Prepare shared gradient batches
+y_batch, state_batch, action_batch = [], [], []
 
 # Prepare game environments
 local_game_states = []
@@ -331,16 +334,17 @@ for n in range(settings.parallel_agents):
 
 # Prepare online network
 game = local_game_states[0]
+
+# Prepare online network
 online_network = DeepQNetwork('online_network', device, settings.random_seed, game.action_size, 
                             initial_learning_rate=settings.learning_rate, 
                             optimizer=settings.optimizer,
                             rms_decay=settings.rms_decay,
                             rms_epsilon=settings.rms_epsilon)
 
-# Set target Deep Q Network
+# Prepare target network
 target_network = DeepQNetwork('target_network', device, settings.random_seed, game.action_size)
-
-
+# Prepare evaluation network
 evaluation_network = DeepQNetwork('evaluation_network', device, settings.random_seed, game.action_size)
 
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=True))
