@@ -181,7 +181,9 @@ def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_ste
 Worker thread that runs an agent training in a local game enviroment.
 '''
 def worker_thread(thread_index, local_game_state): 
-    global stop_requested, global_step, increase_global_step, target_network, online_network, evaluation_network, sess, stats, lock, eval_lock
+    global stop_requested, global_step, increase_global_step, sess, stats # General
+    global target_network, online_network, evaluation_network # Networks
+    global lock, eval_lock # Locks
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
