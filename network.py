@@ -111,10 +111,12 @@ class DeepQNetwork(object):
                     # Compute gradients w.r.t. weights
                     variables = self.get_variables()
                     gradients = tf.gradients(self.loss_function, variables)
-                    # Apply gradient norm clipping
-                    gradients, _ = tf.clip_by_global_norm(gradients, 40.)
-                    gradient_variables = list(zip(gradients, variables))
-                    self.train_op = self.optimizer_function.apply_gradients(gradient_variables)
+                    with tf.name_scope('clipped_gradients') as scope:
+                        # Apply gradient norm clipping
+                        gradients, _ = tf.clip_by_global_norm(gradients, 40.)
+                        gradient_variables = list(zip(gradients, variables))
+                    with tf.name_scope('training_op') as scope:
+                        self.train_op = self.optimizer_function.apply_gradients(gradient_variables)
 
             # Specify how accuracy is measured
             with tf.name_scope('accuracy') as scope:
