@@ -170,7 +170,7 @@ def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_ste
     st_avg = np.average(step_arr)
     sc_avg = np.average(score_arr)
     stats.update_eval({'rewards': np.average(r_avg), 
-                        'score': np.average(sc_avg)
+                        'score': np.average(sc_avg),
                         'steps': np.average(st_avg),
                         'step': at_step
                         }) 
