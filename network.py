@@ -122,17 +122,12 @@ class DeepQNetwork(object):
                 with tf.name_scope('gradient_clipping') as scope:
                     # Compute gradients w.r.t. weights
                     variables = self.get_variables()
-                    gradients = tf.gradients(self.loss_function, variables)
-                    #with tf.name_scope('clipped_gradients') as scope:
-                        # Apply gradient norm clipping
-                        #clipped_gradients = []
-                        #for variable in variables:
-                            #gradient = tf.clip_by_norm(variable, 40.0)
-                            #clipped_gradients.append(gradient)
-                        #gradients = tf.clip_by_norm(gradients, 40.0)
-                    gradient_variables = list(zip(gradients, variables))
-                    with tf.name_scope('training_op') as scope:
-                        self.train_op = self.optimizer_function.apply_gradients(gradient_variables)
+                    gradients = self.optimizer_function.compute_gradients(self.loss_function, variables)
+                    clipped_gradients =[(tf.clip_by_norm(gv[0], 40.), gv[1]) for gv in gradients]
+                    
+                with tf.name_scope('training_op') as scope:
+                    self.lr = tf.Variable(0, name='learn_rate-input')
+                    self.train_op = self.optimizer_function.apply_gradients(clipped_gradients)
 
             # Specify how accuracy is measured
             with tf.name_scope('accuracy') as scope:
@@ -145,21 +140,19 @@ class DeepQNetwork(object):
     '''
     Utilizes the optimizer and objectie function to train the network based on the input and target output.
     '''
-    def train(self, sess, s_input, a_input, y_input, learn_rate):
+    def train(self, sess, s_input, a_input, y_input, learn_rate, g_step):
         with tf.device(self.device):
-            self.optimizer_function.learn_rate = learn_rate 
-            _, loss = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input})
-            return loss
-            return loss
+            #self.optimizer_function.learn_rate = learn_rate 
+            _, self.loss_value = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input, self.lr: learn_rate})
 
-    def accumulate_gradients(self, sess, s_input, a_input, y_input, learn_rate):
+    def accumulate_gradients(self, sess, s_input, a_input, y_input, learn_rate, g_step):
         with tf.device(self.device):
             self.s_array.append(s_input)
             self.a_array.append(a_input)
             self.y_array.append(y_input)
 
             if len(self.s_array) % self.batch_size == 0:
-                self.loss_value = self.train(sess, np.vstack(self.s_array), np.vstack(self.a_array), np.vstack(self.y_array), learn_rate)
+                self.train(sess, np.vstack(self.s_array), np.vstack(self.a_array), np.vstack(self.y_array), learn_rate, g_step)
                 self.s_array, self.a_array, self.y_array = [], [], []
 
     '''

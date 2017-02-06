@@ -29,13 +29,13 @@ flags.DEFINE_boolean('log', False, 'For a verbose log.')
 flags.DEFINE_integer('parallel_agents', 16, 'Number of asynchronous agents (threads) to train with.')
 flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps.')
 flags.DEFINE_integer('local_max_steps', 5, 'Frequency with which each agent network is updated (I_target).')
-flags.DEFINE_integer('target_network_update', 10000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
+flags.DEFINE_integer('target_network_update', 40000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
 flags.DEFINE_integer('frame_skip', 0, 'How many frames to skip (or actions to repeat) for each step.')
 
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
 flags.DEFINE_float('gamma', 0.99, 'Discount factor for rewards.')
-flags.DEFINE_integer('epsilon_anneal', 1000000, 'Number of steps to anneal epsilon.')
+flags.DEFINE_integer('epsilon_anneal', 4000000, 'Number of steps to anneal epsilon.')
 
 # Optimizer settings
 flags.DEFINE_string('optimizer', 'rmsprop', 'Which optimizer to use [adam, gradientdescent, rmsprop]. Defaults to rmsprop.')
@@ -45,7 +45,7 @@ flags.DEFINE_float('learning_rate', 0.0007, 'Initial learning rate.')
 flags.DEFINE_boolean('anneal_learning_rate', True, 'If learning rate should be annealed over global max steps.')
 
 # Evaluation settings
-flags.DEFINE_boolean('evaluate', True, 'If it should run continous evaluation throughout the training session.')
+flags.DEFINE_boolean('evaluate', False, 'If it should run continous evaluation throughout the training session.')
 flags.DEFINE_integer('evaluation_episodes', 10, 'How many evaluation episodes to run (and average the evaluation over).')
 flags.DEFINE_integer('evaluation_frequency', 100000, 'The frequency of evaluation runs.')
 
@@ -126,7 +126,6 @@ def signal_handler(signal, frame):
 def push_stats_updates(stats, loss, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, l_step, g_step):
     stats.update({'loss': loss, 
                 'learning_rate': learning_rate,
-                'accuracy': 0,
                 'qmax': np.average(q_max_arr),
                 'epsilon': np.average(epsilon_arr),
                 'episode_actions': action_arr,
@@ -143,29 +142,36 @@ def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_ste
     print '>>>>>> Starting evaluation at step {}'.format(at_step)
     rewards = 0
     reward_arr = []
+    score_arr = []
     step_arr = []
     for n in range(episodes):
         local_step = 0
+        rewards = 0
+        scores = 0
         terminal = False
         state = game_state.reset()
         while not terminal and not stop_requested: 
             q_values = evaluation_network.predict(sess, [state])
             action = select_action(0.01, q_values, game_state.action_size)
             new_state, reward, terminal = game_state.step(action)
+            if reward > 0.0:
+                scores += reward
             rewards += reward
             local_step += 1
             if terminal:
                 reward_arr.append(rewards)
                 step_arr.append(local_step)
+                score_arr.append(scores)
                 print '>>>>>> Evaluation episode {}/{} finished with reward {} on step {}.'.format(n+1, episodes, rewards, local_step)
-                rewards = 0
             else:
                 state = new_state
                 game_state.update_state()
     r_avg = np.average(reward_arr)
-    s_avg = np.average(step_arr)
+    st_avg = np.average(step_arr)
+    sc_avg = np.average(score_arr)
     stats.update_eval({'rewards': np.average(r_avg), 
-                        'steps': np.average(s_avg),
+                        'score': np.average(sc_avg)
+                        'steps': np.average(st_avg),
                         'step': at_step
                         }) 
     print '>>>>>> Evaluation done with average reward: {}, step {}.'.format(r_avg, s_avg)
@@ -177,15 +183,15 @@ Worker thread that runs an agent training in a local game enviroment.
 def worker_thread(thread_index, local_game_state): 
     global stop_requested, global_step, increase_global_step, sess, stats   # General
     global target_network, online_network, evaluation_network               # Networks
-    global lock, eval_lock, update_lock                                                  # Locks
-    global acc_arr, loss_arr                                                # Network stats
+    global lock, eval_lock, update_lock                                     # Locks
+    #global acc_arr, loss_arr                                                # Network stats
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
     epsilon = 1.0
 
     # Prepare stats
-    action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = [], [], [], [], [], []
+    action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr = [], [], [], [], []
 
     time.sleep(0.5*thread_index)
     g_step = sess.run(global_step)
@@ -235,7 +241,7 @@ def worker_thread(thread_index, local_game_state):
             onehot_action = onehot_vector(action, local_game_state.action_size)            
             update_lock.acquire()
             try:
-                online_network.accumulate_gradients(sess, [state], onehot_action, [update], learning_rate)
+                online_network.accumulate_gradients(sess, [state], onehot_action, [update], learning_rate, g_step)
             finally:
                 update_lock.release()
 
@@ -243,7 +249,7 @@ def worker_thread(thread_index, local_game_state):
             action_arr.append(action)
             reward_arr.append(reward)
             q_max_arr.append(np.max(q_values))
-            
+            loss_arr.append(self.online_network.loss_value)
             epsilon_arr.append(epsilon)
 
             # Update counters and values
@@ -260,7 +266,7 @@ def worker_thread(thread_index, local_game_state):
                         lock.release()
 
 
-            if g_step % settings.evaluation_frequency and settings.evaluate:
+            if g_step % settings.evaluation_frequency == 0 and settings.evaluate:
                 if eval_lock.acquire(False):
                     try:
                         sess.run(evaluation_network.sync_variables_from(online_network))
@@ -279,7 +285,7 @@ def worker_thread(thread_index, local_game_state):
                     push_stats_updates(stats, online_network.loss_value, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
 
                 # Reset stats
-                action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr =  [], [], [], [], [], []
+                action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr =  [], [], [], [], []
             else:
                 # Update current state from s_t to s_t1
                 state = new_state
