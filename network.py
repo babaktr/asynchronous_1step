@@ -142,14 +142,6 @@ class DeepQNetwork(object):
                 lower_value = tf.reduce_min([max_q_value, estimated_value])
                 self.accuracy = tf.div(lower_value, higher_value)
     
-    def clip_gradients(self, gradients):
-        variables = self.get_variables()
-        clipped_gradients = []
-        for gradient in gradients:
-            gradient = tf.clip_by_norm(variable, 40.0)
-            clipped_gradients.append(gradient)
-        return list(zip(clipped_gradients, variables))
-
     '''
     Utilizes the optimizer and objectie function to train the network based on the input and target output.
     '''
@@ -166,7 +158,7 @@ class DeepQNetwork(object):
             self.a_array.append(a_input)
             self.y_array.append(y_input)
 
-            print 'accum'
+            #print 'accum'
 
             if len(self.s_array) % self.batch_size == 0:
                 #a = np.vstack(self.s_array)
@@ -185,10 +177,10 @@ class DeepQNetwork(object):
                 #ops.append(self.train_op)
                 #tf.group(*ops)
                 #self.s_array, self.a_array, self.y_array = [], [], []
-                print 'update {}'.format(len(self.s_array))
+                #print 'update {}'.format(len(self.s_array))
                 self.loss_value = self.train(sess, np.vstack(self.s_array), np.vstack(self.a_array), np.vstack(self.y_array), learn_rate)
                 self.s_array, self.a_array, self.y_array = [], [], []
-                print ' '
+                #print ' '
 
     '''
     Feeds a value through the network and produces an output.
