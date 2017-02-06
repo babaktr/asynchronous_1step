@@ -248,7 +248,7 @@ def worker_thread(thread_index, local_game_state):
             action_arr.append(action)
             reward_arr.append(reward)
             q_max_arr.append(np.max(q_values))
-            loss_arr.append(self.online_network.loss_value)
+            loss_arr.append(online_network.loss_value)
             epsilon_arr.append(epsilon)
 
             # Update counters and values
