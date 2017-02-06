@@ -50,15 +50,17 @@ class DeepQNetwork(object):
             with tf.name_scope('input') as scope:
                 # Action input batch with shape [?, action_size]
                 self.a = tf.placeholder(tf.float32, [None, action_size], name='action-input')
-                self.a_batch = tf.placeholder(tf.float32, [5, action_size], name='action-batch')
 
                 # State input batch with shape [?, 84, 84, 4]
                 self.s = tf.placeholder(tf.float32, shape=[None, 84, 84, 4], name='s-input')
-                self.s_batch = tf.placeholder(tf.float32, shape=[5, 84, 84, 4], name='s-batch')
 
                 # Target Q-value batch with shape [?, 1]
                 self.y = tf.placeholder(tf.float32, shape=[None, 1], name='target-q_value')
-                self.y_batch = tf.placeholder(tf.float32, shape=[5, 1], name='y-batch')
+
+                with tf.name_scope('gradient_clipping') as scope:
+                    clipped_s = tf.clip_by_norm(self.s, 40.0)
+                    clipped_a = tf.clip_by_norm(self.a, 40.0)
+                    clipped_y = tf.clip_by_norm(self.y, 40.0)
 
             # Convolutional layer 1 weights and bias with stride=4
             # Produces 16 19x19 outputs
@@ -69,7 +71,7 @@ class DeepQNetwork(object):
 
                 # Convolutional layer 1 output
                 with tf.name_scope('conv-1-out') as scope:
-                    self.h_conv1 = tf.nn.relu(tf.add(self.conv2d(self.s, self.W_conv1, stride_1), self.b_conv1))
+                    self.h_conv1 = tf.nn.relu(tf.add(self.conv2d(clipped_s, self.W_conv1, stride_1), self.b_conv1))
 
             # Convolutional laer 2 weights and biases with stride=2
             # Produces 32 9x9 outputs
@@ -114,17 +116,21 @@ class DeepQNetwork(object):
                     self.optimizer_function = tf.train.RMSPropOptimizer(initial_learning_rate, decay=rms_decay, epsilon=rms_epsilon)
 
                 with tf.name_scope('loss'):
-                    target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
-                    self.loss_function = tf.reduce_mean(tf.square(tf.subtract(self.y, target_q_value)))
+                    target_q_value = tf.reduce_sum(tf.multiply(self.q_values, clipped_a), reduction_indices=1)
+                    self.loss_function = tf.reduce_mean(tf.square(tf.subtract(clipped_y, target_q_value)))
 
                 with tf.name_scope('gradient_clipping') as scope:
                     # Compute gradients w.r.t. weights
                     variables = self.get_variables()
                     gradients = tf.gradients(self.loss_function, variables)
-                    with tf.name_scope('clipped_gradients') as scope:
+                    #with tf.name_scope('clipped_gradients') as scope:
                         # Apply gradient norm clipping
-                        gradients, _ = tf.clip_by_global_norm(gradients, 40.0)
-                        gradient_variables = list(zip(gradients, variables))
+                        #clipped_gradients = []
+                        #for variable in variables:
+                            #gradient = tf.clip_by_norm(variable, 40.0)
+                            #clipped_gradients.append(gradient)
+                        #gradients = tf.clip_by_norm(gradients, 40.0)
+                    gradient_variables = list(zip(gradients, variables))
                     with tf.name_scope('training_op') as scope:
                         self.train_op = self.optimizer_function.apply_gradients(gradient_variables)
 
@@ -136,13 +142,22 @@ class DeepQNetwork(object):
                 lower_value = tf.reduce_min([max_q_value, estimated_value])
                 self.accuracy = tf.div(lower_value, higher_value)
     
+    def clip_gradients(self, gradients):
+        variables = self.get_variables()
+        clipped_gradients = []
+        for gradient in gradients:
+            gradient = tf.clip_by_norm(variable, 40.0)
+            clipped_gradients.append(gradient)
+        return list(zip(clipped_gradients, variables))
+
     '''
     Utilizes the optimizer and objectie function to train the network based on the input and target output.
     '''
-    def train(self, sess, s_input, a_input, target_output, learn_rate):
+    def train(self, sess, s_input, a_input, y_input, learn_rate):
         with tf.device(self.device):
-            self.optimizer_function.learn_rate = learn_rate
-            _, loss = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: target_output})
+            self.optimizer_function.learn_rate = learn_rate 
+            _, loss = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input})
+            return loss
             return loss
 
     def accumulate_gradients(self, sess, s_input, a_input, y_input, learn_rate):
@@ -151,7 +166,9 @@ class DeepQNetwork(object):
             self.a_array.append(a_input)
             self.y_array.append(y_input)
 
-            if len(self.s_array) == self.batch_size:
+            print 'accum'
+
+            if len(self.s_array) % self.batch_size == 0:
                 #a = np.vstack(self.s_array)
                 #print self.s_batch
                 #print a.shape
@@ -168,8 +185,10 @@ class DeepQNetwork(object):
                 #ops.append(self.train_op)
                 #tf.group(*ops)
                 #self.s_array, self.a_array, self.y_array = [], [], []
+                print 'update {}'.format(len(self.s_array))
                 self.loss_value = self.train(sess, np.vstack(self.s_array), np.vstack(self.a_array), np.vstack(self.y_array), learn_rate)
                 self.s_array, self.a_array, self.y_array = [], [], []
+                print ' '
 
     '''
     Feeds a value through the network and produces an output.
