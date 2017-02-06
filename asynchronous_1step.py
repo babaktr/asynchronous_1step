@@ -174,7 +174,7 @@ def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_ste
                         'steps': np.average(st_avg),
                         'step': at_step
                         }) 
-    print '>>>>>> Evaluation done with average reward: {}, step {}.'.format(r_avg, s_avg)
+    print '>>>>>> Evaluation done with average reward: {}, score {}, step {}.'.format(r_avg, sc_avg, st_avg)
 
 
 '''
@@ -184,25 +184,24 @@ def worker_thread(thread_index, local_game_state):
     global stop_requested, global_step, increase_global_step, sess, stats   # General
     global target_network, online_network, evaluation_network               # Networks
     global lock, eval_lock, update_lock                                     # Locks
-    #global acc_arr, loss_arr                                                # Network stats
+    #global acc_arr, loss_arr                                               # Network stats
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
     epsilon = 1.0
 
-    # Prepare stats
-    action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr = [], [], [], [], []
-
     time.sleep(0.5*thread_index)
     g_step = sess.run(global_step)
     print("Starting agent " + str(thread_index) + " with final epsilon: " + str(final_epsilon))
 
-    local_step = 0
     while g_step < settings.global_max_steps and not stop_requested:
         # Reset counters and values
         local_step = 0
         terminal = False
         run_eval = False
+
+        # Reset stats
+        action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr = [], [], [], [], []
 
         # Get initial game state (s_t)
         state = local_game_state.reset()
@@ -236,12 +235,12 @@ def worker_thread(thread_index, local_game_state):
                 # Terminal state, update using reward
                 update = reward
          
-            learning_rate = anneal_learning_rate(g_step)
+            learn_rate = anneal_learning_rate(g_step)
             # Accumulate gradients for the online network
             onehot_action = onehot_vector(action, local_game_state.action_size)            
             update_lock.acquire()
             try:
-                online_network.accumulate_gradients(sess, [state], onehot_action, [update], learning_rate, g_step)
+                online_network.accumulate_gradients(sess, [state], onehot_action, [update], learn_rate, g_step)
             finally:
                 update_lock.release()
 
@@ -284,8 +283,6 @@ def worker_thread(thread_index, local_game_state):
                     learning_rate = anneal_learning_rate(g_step)
                     push_stats_updates(stats, online_network.loss_value, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
 
-                # Reset stats
-                action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr =  [], [], [], [], []
             else:
                 # Update current state from s_t to s_t1
                 state = new_state
