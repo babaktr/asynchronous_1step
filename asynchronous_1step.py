@@ -308,6 +308,8 @@ lock = Lock()
 eval_lock = Lock()
 update_lock = Lock()
 
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=True))
+
 # Prepare network stat savers
 acc_arr, loss_arr = [], []
 
@@ -325,7 +327,7 @@ for n in range(settings.parallel_agents):
 game = local_game_states[0]
 
 # Prepare online network
-online_network = DeepQNetwork('online_network', device, settings.random_seed, game.action_size, 
+online_network = DeepQNetwork('online_network', sess, device, settings.random_seed, game.action_size, 
                             batch_size=settings.local_max_steps,
                             initial_learning_rate=settings.learning_rate, 
                             optimizer=settings.optimizer,
@@ -333,11 +335,10 @@ online_network = DeepQNetwork('online_network', device, settings.random_seed, ga
                             rms_epsilon=settings.rms_epsilon)
 
 # Prepare target network
-target_network = DeepQNetwork('target_network', device, settings.random_seed, game.action_size)
+target_network = DeepQNetwork('target_network', sess, device, settings.random_seed, game.action_size)
 # Prepare evaluation network
-evaluation_network = DeepQNetwork('evaluation_network', device, settings.random_seed, game.action_size)
+evaluation_network = DeepQNetwork('evaluation_network', sess, device, settings.random_seed, game.action_size)
 
-sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=True))
 
 experiment_name = 'asynchronous-1step-{}_game-{}_global-max-{}'.format(settings.method, 
     settings.game, settings.global_max_steps)
