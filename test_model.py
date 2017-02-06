@@ -114,7 +114,7 @@ def play(game_state):
 
             action = select_action(settings.epsilon, q_values, game_state.action_size)
 
-            time.sleep(0.8)
+            time.sleep(0.08)
             
             # Make action an observe 
             new_state, reward, terminal = game_state.step(action)
