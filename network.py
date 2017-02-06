@@ -158,29 +158,9 @@ class DeepQNetwork(object):
             self.a_array.append(a_input)
             self.y_array.append(y_input)
 
-            #print 'accum'
-
             if len(self.s_array) % self.batch_size == 0:
-                #a = np.vstack(self.s_array)
-                #print self.s_batch
-                #print a.shape
-                #ops = []
-                #s_op = tf.assign(self.s_batch, np.vstack(self.s_array))
-                #a_op = tf.assign(self.a_batch, np.vstack(self.a_array))
-                #y_op = tf.assign(self.y_batch, np.vstack(self.y_array))
-                #ops.append(s)
-                #ops.append(a)
-                #ops.append(y)
-
-                #ops.append(self.train(sess, self.s_batch, self.a_batch, self.y_batch, learning_rate))
-                #ops.append(tf.assign(self.optimizer_function.learn_rate, learn_rate))
-                #ops.append(self.train_op)
-                #tf.group(*ops)
-                #self.s_array, self.a_array, self.y_array = [], [], []
-                #print 'update {}'.format(len(self.s_array))
                 self.loss_value = self.train(sess, np.vstack(self.s_array), np.vstack(self.a_array), np.vstack(self.y_array), learn_rate)
                 self.s_array, self.a_array, self.y_array = [], [], []
-                #print ' '
 
     '''
     Feeds a value through the network and produces an output.
