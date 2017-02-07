@@ -139,7 +139,8 @@ class DeepQNetwork(object):
     def train(self, sess, s_input, a_input, y_input, learn_rate, g_step):
         with tf.device(self.device):
             self.optimizer_function.learn_rate = learn_rate 
-            _, self.loss_value = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input}) #self.lr: learn_rate})
+            _, loss = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input}) #self.lr: learn_rate})
+            return loss
 
     #def accumulate_gradients(self, sess, s_input, a_input, y_input, learn_rate, g_step):
     #    with tf.device(self.device):

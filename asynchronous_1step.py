@@ -123,8 +123,8 @@ def signal_handler(signal, frame):
     print 'You pressed Ctrl+C!'
     stop_requested = True
 
-def push_stats_updates(stats, loss, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, l_step, g_step):
-    stats.update({'loss': loss, 
+def push_stats_updates(stats, loss_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, l_step, g_step):
+    stats.update({'loss': np.average(loss_arr), 
                 'learning_rate': learning_rate,
                 'qmax': np.average(q_max_arr),
                 'epsilon': np.average(epsilon_arr),
@@ -183,8 +183,6 @@ Worker thread that runs an agent training in a local game enviroment.
 def worker_thread(thread_index, local_game_state): 
     global stop_requested, global_step, increase_global_step, sess, stats   # General
     global target_network, online_network, evaluation_network               # Networks
-    global lock, eval_lock, update_lock                                     # Locks
-    #global acc_arr, loss_arr                                               # Network stats
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
@@ -264,7 +262,8 @@ def worker_thread(thread_index, local_game_state):
                 print 'Thread {} updated target network on step: {}'.format(thread_index, g_step)
 
             if local_step % settings.local_max_steps == 0 or terminal:
-                online_network.train(sess, np.vstack(state_batch), np.vstack(action_batch), np.vstack(target_batch), anneal_learning_rate(g_step), g_step)
+                loss = online_network.train(sess, np.vstack(state_batch), np.vstack(action_batch), np.vstack(target_batch), anneal_learning_rate(g_step), g_step)
+                loss_arr.append(loss)
 
             if g_step % settings.evaluation_frequency == 0 and settings.evaluate:
             
@@ -279,7 +278,7 @@ def worker_thread(thread_index, local_game_state):
                 # Update stats
                 if settings.save_stats:
                     learning_rate = anneal_learning_rate(g_step)
-                    push_stats_updates(stats, online_network.loss_value, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
+                    push_stats_updates(stats, loss_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
 
             else:
                 # Update current state from s_t to s_t1
@@ -300,16 +299,11 @@ if settings.use_gpu:
     device = '/gpu:0'
 else:
     device = '/cpu:0'
-
-# Prepare locks
-lock = Lock()
-eval_lock = Lock()
-update_lock = Lock()
-
+    
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=True))
 
 # Prepare network stat savers
-acc_arr, loss_arr = [], []
+#acc_arr, loss_arr = [], []
 
 # Prepare game environments
 local_game_states = []
