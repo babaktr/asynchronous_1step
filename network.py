@@ -34,7 +34,7 @@ class DeepQNetwork(object):
         return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], 
                             padding='VALID')
 
-    def __init__(self, name, sess, device, random_seed, action_size, batch_size=5, initial_learning_rate=0.0007, optimizer='rmsprop', rms_decay=0.99, rms_epsilon=0.1):
+    def __init__(self, name, sess, device, random_seed, action_size, batch_size=5, initial_learning_rate=0.0007, optimizer='rmsprop', rms_decay=0.99, rms_epsilon=0.1, clip_gradients=False):
         self.device = device
 
         with tf.device(self.device) and tf.name_scope(name) as scope:
@@ -110,7 +110,7 @@ class DeepQNetwork(object):
                     # RMSProp
                     self.optimizer_function = tf.train.RMSPropOptimizer(initial_learning_rate, decay=rms_decay, epsilon=rms_epsilon)
 
-                self.lr = tf.Variable(0, name='learn_rate-input')
+                #self.lr = tf.Variable(0, name='learn_rate-input')
 
                 with tf.name_scope('loss'):
                     target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
@@ -118,12 +118,12 @@ class DeepQNetwork(object):
 
                 with tf.name_scope('gradient_clipping') as scope:
                     # Compute gradients w.r.t. weights
-                    variables = self.get_variables()
-                    gradients = self.optimizer_function.compute_gradients(self.loss_function, variables)
-                    clipped_gradients =[(tf.clip_by_norm(gv[0], 40.), gv[1]) for gv in gradients]
+                    gradients = self.optimizer_function.compute_gradients(self.loss_function)
+                    if clip_gradients:
+                        gradients =[(tf.clip_by_norm(gv[0], 40.), gv[1]) for gv in gradients]
                     
                 with tf.name_scope('training_op') as scope:
-                    self.train_op = self.optimizer_function.apply_gradients(clipped_gradients)
+                    self.train_op = self.optimizer_function.apply_gradients(gradients)
 
             # Specify how accuracy is measured
             with tf.name_scope('accuracy') as scope:
@@ -138,8 +138,8 @@ class DeepQNetwork(object):
     '''
     def train(self, sess, s_input, a_input, y_input, learn_rate, g_step):
         with tf.device(self.device):
-            #self.optimizer_function.learn_rate = learn_rate 
-            _, self.loss_value = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input, self.lr: learn_rate})
+            self.optimizer_function.learn_rate = learn_rate 
+            _, self.loss_value = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input}) #self.lr: learn_rate})
 
     def accumulate_gradients(self, sess, s_input, a_input, y_input, learn_rate, g_step):
         with tf.device(self.device):
@@ -168,17 +168,23 @@ class DeepQNetwork(object):
                                                         self.y: target_output})
             return acc
 
-    def get_variables(self,):
+    def get_variables(self, sess):
         return [self.W_conv1, self.b_conv1, self.W_conv2, self.b_conv2, self.W_fc1, self.b_fc1, self.W_fc2, self.b_fc2]
+        #return sess.run(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
 
     def sync_variables_from(self, sess, source_network):
         with tf.device(self.device):
-            source_variables = source_network.get_variables()
-            own_variables = self.get_variables()
+            source_variables = source_network.get_variables(sess)
+            #print source_variables
+            own_variables = self.get_variables(sess)
+            #print own_variables
             sync_ops = []
             for(src_var, own_var) in zip(source_variables, own_variables):
-                sync_op = tf.assign(own_var, src_var)
+                #sync_op = tf.assign(own_var, src_var)
+            
+                sync_op = own_var.assign(src_var)
                 sync_ops.append(sync_op)
-                
+
+            
             return tf.group(*sync_ops)
     

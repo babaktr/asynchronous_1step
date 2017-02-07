@@ -16,7 +16,7 @@ flags = tf.app.flags
 
 # General settings
 flags.DEFINE_string('game', 'Breakout-v0', 'Name of the Atari game to play. Full list: https://gym.openai.com/envs/')
-flags.DEFINE_integer('histogram_summary', 500, 'How many episodes to plot histogram summary over.')
+flags.DEFINE_integer('histogram_summary', 200, 'How many episodes to plot histogram summary over.')
 flags.DEFINE_boolean('load_checkpoint', True, 'If it should should from available checkpoints.')
 flags.DEFINE_boolean('save_checkpoint', True, 'If it should should save checkpoints when break is triggered.')
 flags.DEFINE_boolean('save_stats', True, 'If it should save stats for Tensorboard.')
@@ -45,9 +45,9 @@ flags.DEFINE_float('learning_rate', 0.0007, 'Initial learning rate.')
 flags.DEFINE_boolean('anneal_learning_rate', True, 'If learning rate should be annealed over global max steps.')
 
 # Evaluation settings
-flags.DEFINE_boolean('evaluate', False, 'If it should run continous evaluation throughout the training session.')
+flags.DEFINE_boolean('evaluate', True, 'If it should run continous evaluation throughout the training session.')
 flags.DEFINE_integer('evaluation_episodes', 10, 'How many evaluation episodes to run (and average the evaluation over).')
-flags.DEFINE_integer('evaluation_frequency', 100000, 'The frequency of evaluation runs.')
+flags.DEFINE_integer('evaluation_frequency', 200000, 'The frequency of evaluation runs.')
 
 
 settings = flags.FLAGS
@@ -259,7 +259,7 @@ def worker_thread(thread_index, local_game_state):
             if g_step % settings.target_network_update == 0:
                 if lock.acquire(False):
                     try:
-                        sess.run(target_network.sync_variables_from(online_network))
+                        sess.run(target_network.sync_variables_from(sess, online_network))
                         print 'Thread {} updated target network on step: {}'.format(thread_index, g_step)
                     finally:
                         lock.release()
@@ -332,7 +332,8 @@ online_network = DeepQNetwork('online_network', sess, device, settings.random_se
                             initial_learning_rate=settings.learning_rate, 
                             optimizer=settings.optimizer,
                             rms_decay=settings.rms_decay,
-                            rms_epsilon=settings.rms_epsilon)
+                            rms_epsilon=settings.rms_epsilon,
+                            clip_gradients=True)
 
 # Prepare target network
 target_network = DeepQNetwork('target_network', sess, device, settings.random_seed, game.action_size)
