@@ -137,9 +137,9 @@ def push_stats_updates(stats, loss, learning_rate, q_max_arr, epsilon_arr, actio
 '''
 Runs evaluation of the current network.
 '''
-def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_step):
+def run_evaluation(sess, thread_id, evaluation_network, stats, game_state, episodes, at_step):
     global stop_requested
-    print '>>>>>> Starting evaluation at step {}'.format(at_step)
+    print '>>>>>> Starting evaluation with thread {} at step {}'.format(thread_id, at_step)
     rewards = 0
     reward_arr = []
     score_arr = []
@@ -200,6 +200,10 @@ def worker_thread(thread_index, local_game_state):
         terminal = False
         run_eval = False
 
+        state_batch = []
+        action_batch = []
+        target_batch = []
+
         # Reset stats
         action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr = [], [], [], [], []
 
@@ -237,12 +241,11 @@ def worker_thread(thread_index, local_game_state):
          
             learn_rate = anneal_learning_rate(g_step)
             # Accumulate gradients for the online network
-            onehot_action = onehot_vector(action, local_game_state.action_size)            
-            update_lock.acquire()
-            try:
-                online_network.accumulate_gradients(sess, [state], onehot_action, [update], learn_rate, g_step)
-            finally:
-                update_lock.release()
+            # 
+
+            state_batch.append([state])
+            action_batch.append(onehot_vector(action, local_game_state.action_size))
+            target_batch.append([update])          
 
             # Save for stats
             action_arr.append(action)
@@ -257,21 +260,16 @@ def worker_thread(thread_index, local_game_state):
 
             # Update target network on I_target
             if g_step % settings.target_network_update == 0:
-                if lock.acquire(False):
-                    try:
-                        sess.run(target_network.sync_variables_from(sess, online_network))
-                        print 'Thread {} updated target network on step: {}'.format(thread_index, g_step)
-                    finally:
-                        lock.release()
+                sess.run(target_network.sync_variables_from(sess, online_network))
+                print 'Thread {} updated target network on step: {}'.format(thread_index, g_step)
 
+            if local_step % settings.local_max_steps == 0 or terminal:
+                online_network.train(sess, np.vstack(state_batch), np.vstack(action_batch), np.vstack(target_batch), anneal_learning_rate(g_step), g_step)
 
             if g_step % settings.evaluation_frequency == 0 and settings.evaluate:
-                if eval_lock.acquire(False):
-                    try:
-                        sess.run(evaluation_network.sync_variables_from(online_network))
-                        run_evaluation(sess, evaluation_network, stats, local_game_state, settings.evaluation_episodes, g_step)
-                    finally:
-                        eval_lock.release()
+            
+                sess.run(evaluation_network.sync_variables_from(online_network))
+                run_evaluation(sess, thread_id, evaluation_network, stats, local_game_state, settings.evaluation_episodes, g_step)
           
             if terminal:
                 #print 'pushing stats'

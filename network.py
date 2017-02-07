@@ -141,15 +141,15 @@ class DeepQNetwork(object):
             self.optimizer_function.learn_rate = learn_rate 
             _, self.loss_value = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input}) #self.lr: learn_rate})
 
-    def accumulate_gradients(self, sess, s_input, a_input, y_input, learn_rate, g_step):
-        with tf.device(self.device):
-            self.s_array.append(s_input)
-            self.a_array.append(a_input)
-            self.y_array.append(y_input)
+    #def accumulate_gradients(self, sess, s_input, a_input, y_input, learn_rate, g_step):
+    #    with tf.device(self.device):
+    #        self.s_array.append(s_input)
+    #        self.a_array.append(a_input)
+    #        self.y_array.append(y_input)
 
-            if len(self.s_array) % self.batch_size == 0:
-                self.train(sess, np.vstack(self.s_array), np.vstack(self.a_array), np.vstack(self.y_array), learn_rate, g_step)
-                self.s_array, self.a_array, self.y_array = [], [], []
+    #        if len(self.s_array) % self.batch_size == 0:
+    #            self.train(sess, np.vstack(self.s_array), np.vstack(self.a_array), np.vstack(self.y_array), learn_rate, g_step)
+    #            self.s_array, self.a_array, self.y_array = [], [], []
 
     '''
     Feeds a value through the network and produces an output.
