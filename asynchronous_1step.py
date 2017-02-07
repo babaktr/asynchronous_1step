@@ -16,7 +16,7 @@ flags = tf.app.flags
 
 # General settings
 flags.DEFINE_string('game', 'Breakout-v0', 'Name of the Atari game to play. Full list: https://gym.openai.com/envs/')
-flags.DEFINE_integer('histogram_summary', 500, 'How many episodes to plot histogram summary over.')
+flags.DEFINE_integer('histogram_summary', 200, 'How many episodes to plot histogram summary over.')
 flags.DEFINE_boolean('load_checkpoint', True, 'If it should should from available checkpoints.')
 flags.DEFINE_boolean('save_checkpoint', True, 'If it should should save checkpoints when break is triggered.')
 flags.DEFINE_boolean('save_stats', True, 'If it should save stats for Tensorboard.')
@@ -29,13 +29,13 @@ flags.DEFINE_boolean('log', False, 'For a verbose log.')
 flags.DEFINE_integer('parallel_agents', 16, 'Number of asynchronous agents (threads) to train with.')
 flags.DEFINE_integer('global_max_steps', 80000000, 'Maximum training steps.')
 flags.DEFINE_integer('local_max_steps', 5, 'Frequency with which each agent network is updated (I_target).')
-flags.DEFINE_integer('target_network_update', 10000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
-flags.DEFINE_integer('frame_skip', 2, 'How many frames to skip (or actions to repeat) for each step.')
+flags.DEFINE_integer('target_network_update', 40000, 'Frequency with which the shared target network is updated (I_AsyncUpdate).')
+flags.DEFINE_integer('frame_skip', 0, 'How many frames to skip (or actions to repeat) for each step.')
 
 # Method settings
 flags.DEFINE_string('method', 'q', 'Training algorithm to use [q, sarsa].')
 flags.DEFINE_float('gamma', 0.99, 'Discount factor for rewards.')
-flags.DEFINE_integer('epsilon_anneal', 1000000, 'Number of steps to anneal epsilon.')
+flags.DEFINE_integer('epsilon_anneal', 4000000, 'Number of steps to anneal epsilon.')
 
 # Optimizer settings
 flags.DEFINE_string('optimizer', 'rmsprop', 'Which optimizer to use [adam, gradientdescent, rmsprop]. Defaults to rmsprop.')
@@ -47,7 +47,7 @@ flags.DEFINE_boolean('anneal_learning_rate', True, 'If learning rate should be a
 # Evaluation settings
 flags.DEFINE_boolean('evaluate', True, 'If it should run continous evaluation throughout the training session.')
 flags.DEFINE_integer('evaluation_episodes', 10, 'How many evaluation episodes to run (and average the evaluation over).')
-flags.DEFINE_integer('evaluation_frequency', 100000, 'The frequency of evaluation runs.')
+flags.DEFINE_integer('evaluation_frequency', 200000, 'The frequency of evaluation runs.')
 
 
 settings = flags.FLAGS
@@ -94,12 +94,6 @@ def onehot_vector(action, action_size):
     return vector
 
 '''
-Vertically stack batches to match network structure
-'''
-def stack_batches(state_batch, action_batch, y_batch):
-    return np.vstack(state_batch), np.vstack(action_batch), np.vstack(y_batch)
-
-'''
 Handles the loading any available checkpoint.
 '''
 def load_checkpoint(sess, saver, checkpoint_path):
@@ -129,17 +123,16 @@ def signal_handler(signal, frame):
     print 'You pressed Ctrl+C!'
     stop_requested = True
 
-def push_stats_updates(stats, loss_arr, acc_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, global_step):
-    stats.update({'loss': np.average(loss_arr), 
-                                'accuracy': np.average(acc_arr),
-                                'learning_rate': learning_rate,
-                                'qmax': np.average(q_max_arr),
-                                'epsilon': np.average(epsilon_arr),
-                                'episode_actions': action_arr,
-                                'reward': np.sum(reward_arr),
-                                'steps': local_step,
-                                'step': global_step
-                                }) 
+def push_stats_updates(stats, loss, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, l_step, g_step):
+    stats.update({'loss': loss, 
+                'learning_rate': learning_rate,
+                'qmax': np.average(q_max_arr),
+                'epsilon': np.average(epsilon_arr),
+                'episode_actions': action_arr,
+                'reward': np.sum(reward_arr),
+                'steps': l_step,
+                'step': g_step
+                }) 
 
 '''
 Runs evaluation of the current network.
@@ -149,62 +142,66 @@ def run_evaluation(sess, evaluation_network, stats, game_state, episodes, at_ste
     print '>>>>>> Starting evaluation at step {}'.format(at_step)
     rewards = 0
     reward_arr = []
+    score_arr = []
     step_arr = []
     for n in range(episodes):
         local_step = 0
+        rewards = 0
+        scores = 0
         terminal = False
         state = game_state.reset()
         while not terminal and not stop_requested: 
             q_values = evaluation_network.predict(sess, [state])
             action = select_action(0.01, q_values, game_state.action_size)
             new_state, reward, terminal = game_state.step(action)
+            if reward > 0.0:
+                scores += reward
             rewards += reward
             local_step += 1
             if terminal:
                 reward_arr.append(rewards)
                 step_arr.append(local_step)
+                score_arr.append(scores)
                 print '>>>>>> Evaluation episode {}/{} finished with reward {} on step {}.'.format(n+1, episodes, rewards, local_step)
-                rewards = 0
             else:
                 state = new_state
                 game_state.update_state()
     r_avg = np.average(reward_arr)
-    s_avg = np.average(step_arr)
+    st_avg = np.average(step_arr)
+    sc_avg = np.average(score_arr)
     stats.update_eval({'rewards': np.average(r_avg), 
-                        'steps': np.average(s_avg),
+                        'score': np.average(sc_avg),
+                        'steps': np.average(st_avg),
                         'step': at_step
                         }) 
-    print '>>>>>> Evaluation done with average reward: {}, step {}.'.format(r_avg, s_avg)
+    print '>>>>>> Evaluation done with average reward: {}, score {}, step {}.'.format(r_avg, sc_avg, st_avg)
 
 
 '''
 Worker thread that runs an agent training in a local game enviroment.
 '''
 def worker_thread(thread_index, local_game_state): 
-    global stop_requested, global_step, increase_global_step, sess, stats # General
-    global target_network, online_network, evaluation_network # Networks
-    global lock, eval_lock # Locks
+    global stop_requested, global_step, increase_global_step, sess, stats   # General
+    global target_network, online_network, evaluation_network               # Networks
+    global lock, eval_lock, update_lock                                     # Locks
+    #global acc_arr, loss_arr                                               # Network stats
 
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
     epsilon = 1.0
 
-    # Prepare gradiets
-    y_batch, state_batch, action_batch = [], [], []
-
-    # Prepare stats
-    action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr = [], [], [], [], [], []
-
     time.sleep(0.5*thread_index)
     g_step = sess.run(global_step)
     print("Starting agent " + str(thread_index) + " with final epsilon: " + str(final_epsilon))
 
-    local_step = 0
     while g_step < settings.global_max_steps and not stop_requested:
         # Reset counters and values
         local_step = 0
         terminal = False
         run_eval = False
+
+        # Reset stats
+        action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr = [], [], [], [], []
 
         # Get initial game state (s_t)
         state = local_game_state.reset()
@@ -237,16 +234,22 @@ def worker_thread(thread_index, local_game_state):
             else:
                 # Terminal state, update using reward
                 update = reward
-
-            # Fill batch
-            y_batch.append([update])
-            state_batch.append([state])
-            action_batch.append(onehot_vector(action, local_game_state.action_size))
+         
+            learn_rate = anneal_learning_rate(g_step)
+            # Accumulate gradients for the online network
+            onehot_action = onehot_vector(action, local_game_state.action_size)            
+            update_lock.acquire()
+            try:
+                online_network.accumulate_gradients(sess, [state], onehot_action, [update], learn_rate, g_step)
+            finally:
+                update_lock.release()
 
             # Save for stats
+            action_arr.append(action)
             reward_arr.append(reward)
             q_max_arr.append(np.max(q_values))
-            action_arr.append(action)
+            loss_arr.append(online_network.loss_value)
+            epsilon_arr.append(epsilon)
 
             # Update counters and values
             local_step += 1
@@ -256,29 +259,13 @@ def worker_thread(thread_index, local_game_state):
             if g_step % settings.target_network_update == 0:
                 if lock.acquire(False):
                     try:
-                        sess.run(target_network.sync_variables_from(online_network))
+                        sess.run(target_network.sync_variables_from(sess, online_network))
                         print 'Thread {} updated target network on step: {}'.format(thread_index, g_step)
                     finally:
                         lock.release()
 
-            # Update online network on I_AsyncUpdate
-            if local_step % settings.local_max_steps == 0 or terminal:
-                state_batch, action_batch, y_batch = stack_batches(state_batch, action_batch, y_batch)
-                # Measure accuracy of the network given the batches
-                acc = online_network.get_accuracy(sess, state_batch, y_batch)
-                # Train online network with gradient batches
-                learning_rate = anneal_learning_rate(g_step)
-                loss = online_network.train(sess, state_batch, action_batch, y_batch, learning_rate)
 
-                # Save values for stats
-                epsilon_arr.append(epsilon)
-                loss_arr.append(loss)
-                acc_arr.append(acc)
-
-                # Clear gradients
-                y_batch, state_batch, action_batch = [], [], []
-
-            if g_step % settings.evaluation_frequency and settings.evaluate:
+            if g_step % settings.evaluation_frequency == 0 and settings.evaluate:
                 if eval_lock.acquire(False):
                     try:
                         sess.run(evaluation_network.sync_variables_from(online_network))
@@ -287,15 +274,15 @@ def worker_thread(thread_index, local_game_state):
                         eval_lock.release()
           
             if terminal:
+                #print 'pushing stats'
                 print 'Thread: {}  /  Global step: {}  /  Local steps: {}  /  Reward: {}  /  Qmax: {}  /  Epsilon: {}'.format(str(thread_index).zfill(2), 
                     g_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'), format(np.average(epsilon_arr), '.2f'))
 
                 # Update stats
                 if settings.save_stats:
-                    push_stats_updates(stats, loss_arr, acc_arr, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
+                    learning_rate = anneal_learning_rate(g_step)
+                    push_stats_updates(stats, online_network.loss_value, learning_rate, q_max_arr, epsilon_arr, action_arr, reward_arr, local_step, g_step)
 
-                # Reset stats
-                action_arr, q_max_arr, reward_arr, epsilon_arr, loss_arr, acc_arr =  [], [], [], [], [], []
             else:
                 # Update current state from s_t to s_t1
                 state = new_state
@@ -316,8 +303,15 @@ if settings.use_gpu:
 else:
     device = '/cpu:0'
 
+# Prepare locks
 lock = Lock()
 eval_lock = Lock()
+update_lock = Lock()
+
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=True))
+
+# Prepare network stat savers
+acc_arr, loss_arr = [], []
 
 # Prepare game environments
 local_game_states = []
@@ -331,19 +325,21 @@ for n in range(settings.parallel_agents):
 
 # Prepare online network
 game = local_game_states[0]
-online_network = DeepQNetwork('online_network', device, settings.random_seed, game.action_size, 
+
+# Prepare online network
+online_network = DeepQNetwork('online_network', sess, device, settings.random_seed, game.action_size, 
+                            batch_size=settings.local_max_steps,
                             initial_learning_rate=settings.learning_rate, 
                             optimizer=settings.optimizer,
                             rms_decay=settings.rms_decay,
-                            rms_epsilon=settings.rms_epsilon)
+                            rms_epsilon=settings.rms_epsilon,
+                            clip_gradients=True)
 
-# Set target Deep Q Network
-target_network = DeepQNetwork('target_network', device, settings.random_seed, game.action_size)
+# Prepare target network
+target_network = DeepQNetwork('target_network', sess, device, settings.random_seed, game.action_size)
+# Prepare evaluation network
+evaluation_network = DeepQNetwork('evaluation_network', sess, device, settings.random_seed, game.action_size)
 
-
-evaluation_network = DeepQNetwork('evaluation_network', device, settings.random_seed, game.action_size)
-
-sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=True))
 
 experiment_name = 'asynchronous-1step-{}_game-{}_global-max-{}'.format(settings.method, 
     settings.game, settings.global_max_steps)

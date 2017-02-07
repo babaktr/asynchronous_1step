@@ -12,9 +12,9 @@ class Stats(object):
 
         with tf.variable_scope('summary'):
             scalar_summary_tags = ['actions/0', 'actions/1', 'actions/2', 
-                                'network/loss', 'network/accuracy', 'network/learning_rate', 
+                                'network/loss', 'network/learning_rate', 
                                 'episode/avg_q_max', 'episode/epsilon', 'episode/reward', 'episode/steps',
-                                'evaluation/rewards', 'evaluation/steps']
+                                'evaluation/rewards', 'evaluation/score', 'evaluation/steps']
 
             self.summary_placeholders = {}
             self.summary_ops = {}
@@ -48,7 +48,6 @@ class Stats(object):
         self.episode_actions = self.episode_actions + actions
 
         self.inject_summary({'network/loss': dictionary['loss'],
-                            'network/accuracy': dictionary['accuracy'],
                             'network/learning_rate': dictionary['learning_rate'],
                             'episode/avg_q_max': dictionary['qmax'],
                             'episode/epsilon': dictionary['epsilon'],
@@ -72,6 +71,7 @@ class Stats(object):
     def update_eval(self, dictionary):
         self.inject_summary({
               'evaluation/rewards': dictionary['rewards'],
+              'evaluation/score': dictionary['score'],
               'evaluation/steps': dictionary['steps'],
             }, dictionary['step'])
 
