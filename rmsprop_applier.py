@@ -3,6 +3,7 @@ FULL CREDIT for this RMSPropApplier class and the usage of it goes to
 @Miyosuda (https://github.com/miyosuda) at his repository async_deep_reinforce (https://github.com/miyosuda/async_deep_reinforce)
 '''
 
+import tensorflow as tf
 from tensorflow.python.training import training_ops
 from tensorflow.python.training import slot_creator
 
