@@ -94,16 +94,16 @@ class DeepQNetwork(object):
                 with tf.name_scope('q_values') as scope:
                     self.q_values = tf.add(tf.matmul(h_fc1, self.W_fc2), self.b_fc2)
 
-            with tf.name_scope('optimizer') as scope:
-                if optimizer.lower() == 'adam':
+            #with tf.name_scope('optimizer') as scope:
+            #    if optimizer.lower() == 'adam':
                     # Adam Optimizer
-                    self.optimizer_function = tf.train.AdamOptimizer(initial_learning_rate)
-                elif optimizer.lower() == 'gradientdecent':
+            #        self.optimizer_function = tf.train.AdamOptimizer(initial_learning_rate)
+            #    elif optimizer.lower() == 'gradientdecent':
                     # Gradient Descent
-                    self.optimizer_function = tf.train.GradientDescentOptimizer(initial_learning_rate)
-                else: 
+            #        self.optimizer_function = tf.train.GradientDescentOptimizer(initial_learning_rate)
+            #    else: 
                     # RMSProp
-                    self.optimizer_function = tf.train.RMSPropOptimizer(initial_learning_rate, decay=rms_decay, epsilon=rms_epsilon)
+            #        self.optimizer_function = tf.train.RMSPropOptimizer(initial_learning_rate, decay=rms_decay, epsilon=rms_epsilon)
 
                 self.lr = tf.Variable(0, name='learn_rate-input', trainable=False)
 
