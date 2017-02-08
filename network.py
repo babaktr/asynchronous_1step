@@ -34,18 +34,13 @@ class DeepQNetwork(object):
         return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], 
                             padding='VALID')
 
-    def __init__(self, name, sess, device, random_seed, action_size, batch_size=5, initial_learning_rate=0.0007, optimizer='rmsprop', rms_decay=0.99, rms_epsilon=0.1, clip_gradients=False):
+    def __init__(self, name, device, random_seed, action_size, initial_learning_rate=0.0007, optimizer='rmsprop', rms_decay=0.99, rms_epsilon=0.1):
         self.device = device
 
         with tf.device(self.device) and tf.name_scope(name) as scope:
             # Set random seed
             tf.set_random_seed(random_seed)
 
-            self.a_array = []
-            self.s_array = []
-            self.y_array = []
-            self.batch_size = batch_size
-            self.loss_value = 0
 
             with tf.name_scope('input') as scope:
                 # Action input batch with shape [?, action_size]
@@ -110,47 +105,54 @@ class DeepQNetwork(object):
                     # RMSProp
                     self.optimizer_function = tf.train.RMSPropOptimizer(initial_learning_rate, decay=rms_decay, epsilon=rms_epsilon)
 
-                #self.lr = tf.Variable(0, name='learn_rate-input')
+                self.lr = tf.Variable(0, name='learn_rate-input', trainable=False)
 
                 with tf.name_scope('loss'):
                     target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
                     self.loss_function = tf.reduce_mean(tf.square(tf.subtract(self.y, target_q_value)))
 
-                with tf.name_scope('gradient_clipping') as scope:
+                with tf.name_scope('gradients') as scope:
+                    self.gradients = tf.gradients(self.loss_function, self.get_variables())
                     # Compute gradients w.r.t. weights
-                    gradients = self.optimizer_function.compute_gradients(self.loss_function)
-                    if clip_gradients:
-                        gradients =[(tf.clip_by_norm(gv[0], 40.), gv[1]) for gv in gradients]
+                    #self.gradients = self.optimizer_function.compute_gradients(self.loss_function)
                     
-                with tf.name_scope('training_op') as scope:
-                    self.train_op = self.optimizer_function.apply_gradients(gradients)
+                    
+                #with tf.name_scope('training_op') as scope:
+                #    self.train_op = self.optimizer_function.apply_gradients(self.gradients)
 
-            # Specify how accuracy is measured
-            with tf.name_scope('accuracy') as scope:
-                max_q_value = tf.reduce_max(self.q_values)
-                estimated_value = tf.reduce_max(self.y)
-                higher_value = tf.reduce_max([max_q_value, estimated_value])
-                lower_value = tf.reduce_min([max_q_value, estimated_value])
-                self.accuracy = tf.div(lower_value, higher_value)
-    
+    def clip_gradients(ariables, gradients):
+        clip_ops = []
+        with tf.device(self.device):
+            #gradients =[(tf.clip_by_norm(gv[0], 40.), gv[1]) for gv in gradients]
+            for (variable, gradient) in zip(variables, gradients):
+                clipped_gradient = tf.clip_by_norm(gradient, 40.)
+                clipped_gradients.append((clipped_gradients, variable))
+
+
+    def apply_gradients(self, variables, gradients):
+        clipped_gradients = []
+        #variables = self.get_variables()
+        with tf.device(self.device):
+            #gradients =[(tf.clip_by_norm(gv[0], 40.), gv[1]) for gv in gradients]
+            for (variable, gradient) in zip(variables, gradients):
+                clipped_gradient = tf.clip_by_norm(gradient, 40.)
+                clipped_gradients.append((clipped_gradients, variable))
+
+            return optimizer_function.apply_gradients(clipped_gradients)
+
+    def accumulate_gradients(self):
+        sess.run(self.gradients, feed_dict={self.s: s_input, self.a: a_input, self.y: y_input, self.lr: learn_rate})
+
+
     '''
     Utilizes the optimizer and objectie function to train the network based on the input and target output.
     '''
-    def train(self, sess, s_input, a_input, y_input, learn_rate, g_step):
+    def train(self, sess, s_input, a_input, y_input, learn_rate, g_step, train_op):
         with tf.device(self.device):
-            self.optimizer_function.learn_rate = learn_rate 
-            _, self.loss_value = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input}) #self.lr: learn_rate})
-
-    def accumulate_gradients(self, sess, s_input, a_input, y_input, learn_rate, g_step):
-        with tf.device(self.device):
-            self.s_array.append(s_input)
-            self.a_array.append(a_input)
-            self.y_array.append(y_input)
-
-            if len(self.s_array) % self.batch_size == 0:
-                self.train(sess, np.vstack(self.s_array), np.vstack(self.a_array), np.vstack(self.y_array), learn_rate, g_step)
-                self.s_array, self.a_array, self.y_array = [], [], []
-
+            #self.optimizer_function.learn_rate = learn_rate 
+            #train_op = self.apply_gradients(gradients)
+            _, loss = sess.run([train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input, self.lr: learn_rate})
+            return loss
     '''
     Feeds a value through the network and produces an output.
     '''
@@ -168,23 +170,19 @@ class DeepQNetwork(object):
                                                         self.y: target_output})
             return acc
 
-    def get_variables(self, sess):
-        return [self.W_conv1, self.b_conv1, self.W_conv2, self.b_conv2, self.W_fc1, self.b_fc1, self.W_fc2, self.b_fc2]
-        #return sess.run(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
+    def get_variables(self):
+        return [self.W_conv1, self.b_conv1, 
+                self.W_conv2, self.b_conv2,
+                self.W_fc1, self.b_fc1, 
+                self.W_fc2, self.b_fc2]
 
-    def sync_variables_from(self, sess, source_network):
+    def sync_variables_from(self, source_network):
         with tf.device(self.device):
-            source_variables = source_network.get_variables(sess)
-            #print source_variables
-            own_variables = self.get_variables(sess)
-            #print own_variables
+            source_variables = source_network.get_variables()
+            own_variables = self.get_variables()
             sync_ops = []
-            for(src_var, own_var) in zip(source_variables, own_variables):
-                #sync_op = tf.assign(own_var, src_var)
-            
-                sync_op = own_var.assign(src_var)
+            for(src_var, own_var) in zip(source_variables, own_variables):            
+                sync_op = tf.assign(own_var, src_var)
                 sync_ops.append(sync_op)
-
-            
             return tf.group(*sync_ops)
     
