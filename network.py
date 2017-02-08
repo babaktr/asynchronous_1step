@@ -94,17 +94,6 @@ class DeepQNetwork(object):
                 with tf.name_scope('q_values') as scope:
                     self.q_values = tf.add(tf.matmul(h_fc1, self.W_fc2), self.b_fc2)
 
-            #with tf.name_scope('optimizer') as scope:
-            #    if optimizer.lower() == 'adam':
-                    # Adam Optimizer
-            #        self.optimizer_function = tf.train.AdamOptimizer(initial_learning_rate)
-            #    elif optimizer.lower() == 'gradientdecent':
-                    # Gradient Descent
-            #        self.optimizer_function = tf.train.GradientDescentOptimizer(initial_learning_rate)
-            #    else: 
-                    # RMSProp
-            #        self.optimizer_function = tf.train.RMSPropOptimizer(initial_learning_rate, decay=rms_decay, epsilon=rms_epsilon)
-
                 self.lr = tf.Variable(0, name='learn_rate-input', trainable=False)
 
                 with tf.name_scope('loss'):
@@ -113,17 +102,10 @@ class DeepQNetwork(object):
 
                 with tf.name_scope('gradients') as scope:
                     self.gradients = tf.gradients(self.loss_function, self.get_variables())
-                    # Compute gradients w.r.t. weights
-                    #self.gradients = self.optimizer_function.compute_gradients(self.loss_function)
-                    
-                    
-                #with tf.name_scope('training_op') as scope:
-                #    self.train_op = self.optimizer_function.apply_gradients(self.gradients)
-
+                   
     def clip_gradients(ariables, gradients):
         clip_ops = []
         with tf.device(self.device):
-            #gradients =[(tf.clip_by_norm(gv[0], 40.), gv[1]) for gv in gradients]
             for (variable, gradient) in zip(variables, gradients):
                 clipped_gradient = tf.clip_by_norm(gradient, 40.)
                 clipped_gradients.append((clipped_gradients, variable))
@@ -131,9 +113,7 @@ class DeepQNetwork(object):
 
     def apply_gradients(self, variables, gradients):
         clipped_gradients = []
-        #variables = self.get_variables()
         with tf.device(self.device):
-            #gradients =[(tf.clip_by_norm(gv[0], 40.), gv[1]) for gv in gradients]
             for (variable, gradient) in zip(variables, gradients):
                 clipped_gradient = tf.clip_by_norm(gradient, 40.)
                 clipped_gradients.append((clipped_gradients, variable))
