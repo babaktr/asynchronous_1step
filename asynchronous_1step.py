@@ -310,9 +310,7 @@ if settings.use_gpu:
     device = '/gpu:0'
 else:
     device = '/cpu:0'
-<<<<<<< HEAD
-    
-=======
+
 
 with tf.name_scope('global_step_counter') as cope:
     with tf.device(device):
@@ -325,7 +323,6 @@ lock = Lock()
 eval_lock = Lock()
 update_lock = Lock()
 
->>>>>>> 6dfd5a54b7ea391b12e8cdeb0a75871d8d628db8
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=True))
 
 # Prepare network stat savers

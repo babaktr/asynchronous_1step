@@ -13,7 +13,7 @@ flags = tf.app.flags
 
 # General settings
 flags.DEFINE_string('mode', 'play', 'What to run with the loaded model [play, visualize].')
-flags.DEFINE_string('game', 'Breakout-v0', 'What game to play.')
+flags.DEFINE_string('game', 'BreakoutDeterministic-v0', 'What game to play.')
 flags.DEFINE_boolean('load_checkpoint', True, 'If it should load from available checkpoints.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 flags.DEFINE_boolean('log', False, 'For a verbose log.')
