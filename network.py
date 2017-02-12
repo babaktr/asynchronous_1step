@@ -139,8 +139,8 @@ class DeepQNetwork(object):
     def train(self, sess, s_input, a_input, y_input, learn_rate, g_step):
         with tf.device(self.device):
             self.optimizer_function.learn_rate = learn_rate 
-            _, self.loss_value = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input}) #self.lr: learn_rate})
-
+            _, loss = sess.run([self.train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input}) #self.lr: learn_rate})
+            return loss
     #def accumulate_gradients(self, sess, s_input, a_input, y_input, learn_rate, g_step):
     #    with tf.device(self.device):
     #        self.s_array.append(s_input)
@@ -168,23 +168,21 @@ class DeepQNetwork(object):
                                                         self.y: target_output})
             return acc
 
-    def get_variables(self, sess):
+    def get_variables(self):
         return [self.W_conv1, self.b_conv1, self.W_conv2, self.b_conv2, self.W_fc1, self.b_fc1, self.W_fc2, self.b_fc2]
         #return sess.run(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
 
-    def sync_variables_from(self, sess, source_network):
+    def sync_variables_from(self, source_network):
+    	source_variables = source_network.get_variables()
+        #print source_variables
+        own_variables = self.get_variables()
+        #print own_variables
+        sync_ops = []
         with tf.device(self.device):
-            source_variables = source_network.get_variables(sess)
-            #print source_variables
-            own_variables = self.get_variables(sess)
-            #print own_variables
-            sync_ops = []
             for(src_var, own_var) in zip(source_variables, own_variables):
-                #sync_op = tf.assign(own_var, src_var)
-            
-                sync_op = own_var.assign(src_var)
-                sync_ops.append(sync_op)
-
-            
+                sync_op = tf.assign(own_var, src_var)
+           
+                #sync_op = own_var.assign(src_var)
+                sync_ops.append(sync_op)       
             return tf.group(*sync_ops)
     
