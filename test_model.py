@@ -218,21 +218,23 @@ game_state = GameState(settings.random_seed,
 
 # Prepare online network
 game = game_state
-online_network = DeepQNetwork('online_network',
+
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
+                                        allow_soft_placement=True))
+online_network = DeepQNetwork('online_network', sess,
                             device, 
                             settings.random_seed, 
                             game.action_size)
 
 # Set target Deep Q Network
-target_network = DeepQNetwork('target_network',
+target_network = DeepQNetwork('target_network', sess,
                             device, 
                             settings.random_seed, 
                             game.action_size)
 
-sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
-                                        allow_soft_placement=True))
 
-experiment_name = 'asynchronous-1step-{}_game-{}_global-max-{}'.format(settings.method, 
+
+experiment_name = 'fixed-asynchronous-1step-{}_game-{}_global-max-{}'.format(settings.method, 
     settings.game, settings.global_max_steps)
 
 init = tf.global_variables_initializer()
