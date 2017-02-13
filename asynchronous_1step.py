@@ -1,23 +1,19 @@
-import numpy as np
-import tensorflow as tf
-
-from network import DeepQNetwork
-from game_state import GameState
-from stats import Stats
-
-from threading import Thread
-from threading import Lock
-
-from rmsprop_applier import RMSPropApplier
-
 import time 
 import signal
+
+from param_server import ParameterServer
+
+
 import os
+import sys
 
 flags = tf.app.flags
 
+if sys.version_info < (3,0):
+    warnings.warn('For optimized speed, run this on Python3 instead!', Warning)
+
 # General settings
-flags.DEFINE_string('game', 'Breakout-v0', 'Name of the Atari game to play. Full list: https://gym.openai.com/envs/')
+flags.DEFINE_string('game', 'BreakoutDeterministic-v0', 'Name of the Atari game to play. Full list: https://gym.openai.com/envs/')
 flags.DEFINE_integer('histogram_summary', 200, 'How many episodes to plot histogram summary over.')
 flags.DEFINE_boolean('load_checkpoint', True, 'If it should should from available checkpoints.')
 flags.DEFINE_boolean('save_checkpoint', True, 'If it should should save checkpoints when break is triggered.')
@@ -53,6 +49,10 @@ flags.DEFINE_integer('evaluation_frequency', 200000, 'The frequency of evaluatio
 
 
 settings = flags.FLAGS
+
+
+ParameterServer().main(settings)
+
 
 '''
 Sample final epsilon as paper by Mnih et. al. 2016.
