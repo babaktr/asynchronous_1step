@@ -6,15 +6,15 @@ import time
 import gym
 
 class GameState(object):
-    def __init__(self, random_seed, log, game, display, frame_skip):
+    def __init__(self, random_seed, game=settings.game, display=settings.display):
         np.random.seed(random_seed)
-        self.log = log
-        self.display = display
-        self.frame_skip = frame_skip
-
         # Load game environment
         self.game = gym.make(game)
         self.game.seed(random_seed)
+        self.display = display
+
+        self.frame = Queue(maxsize=4)
+        
         # Get minimal action set
         if game == 'Pong-v0' or game == 'Breakout-v0':
             self.action_size = 3
@@ -22,15 +22,23 @@ class GameState(object):
             self.action_shift = 1
         else:
             # Tip: Rather than letting it pass to this case, see which 
-            # actions the game you want to run uses to speed up the training
-            # significantly!
+            # actions the game you want to run uses to potentially speed 
+            # up the training significantly!
             self.action_size = self.game.action_space.n
             self.action_shift = 0
+
+        self.s_t = None
+        self.s_t1 = None
+        self.accumulated_reward = 0
+
+        self.reset()
 
     '''
     Resets game environments and regenerates new internal state s_t.
     '''
     def reset(self):
+        self.accumulated_reward = 0
+        self.frames.queue.clear()
         x_t_raw = self.game.reset()
     
         self.x_t = self.process_frame(x_t_raw)
@@ -83,3 +91,5 @@ class GameState(object):
     '''
     def update_state(self):
         self.s_t = self.s_t1
+
+        game_state.py
