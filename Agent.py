@@ -26,7 +26,6 @@ class Agent(Process):
         self.target_wait_queue = Queue(maxsize=1)
         self.stop_flag = Value('i', 0)
 
-
     def anneal_epsilon(self, step):
         if step < Settings.epsilon_anneal:
             epsilon = 1.0 - step * ((1.0 - final_epsilon) / Settings.epsilon_anneal)
