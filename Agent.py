@@ -26,7 +26,8 @@ class Agent(Process):
         self.target_wait_queue = Queue(maxsize=1)
         self.stop_flag = Value('i', 0)
 
-    def anneal_epsilon(step):
+
+    def anneal_epsilon(self, step):
         if step < Settings.epsilon_anneal:
             epsilon = 1.0 - step * ((1.0 - final_epsilon) / Settings.epsilon_anneal)
         else:
@@ -42,11 +43,15 @@ class Agent(Process):
         target_q_values = self.target_wait_queue.get()
         return target_q_values
 
-    def select_action(self, epsilon, q_values):
+    @staticmethod
+    def select_action(epsilon, q_values):
         if Settings.display or np.random.random() < epsilon:
             action = np.argmax(q_values)
         else:
-            action = np.random.randint(0, )
+            action = np.random.randint(0, ACTION_SIZE)
+    @staticmethod
+    def stack_data(s, a, r):
+        return np.vstack(s), np.vstack(a), np.vstack(r)
 
     def play_episode(self):
         state = self.env.reset()
@@ -95,14 +100,33 @@ class Agent(Process):
             q_max_arr.append(np.max(q_values))
             epsilon_arr.append(epsilon)
 
-
-            if terminal:
+            if terminal or local_step % Settings.tmax == 0:
                 #print 'pushing stats'
                 #print 'Thread: {}  /  Global step: {}  /  Local steps: {}  /  Reward: {}  /  Qmax: {}  /  Epsilon: {}'.format(str(thread_index).zfill(2), 
                     #g_step, local_step, np.sum(reward_arr), format(np.average(q_max_arr), '.1f'), format(np.average(epsilon_arr), '.2f'))
+                stacked_s, stacked_a, stacked_t = stack_data(state_batch, action_batch, target_batch)
+                state_batch, action_batch, target_batch = [], [], []
+                accumulated_r = np.sum(reward_arr)
+                reward_arr = []
+                yield stacked_s, stacked_a, stacked_t, accumulated_r
+
             else:
                 state = new_state
                 local_step += 1
+
+        def run(self):
+            time.sleep(1)
+            np.random.seed(self.index + Settings.random_seed)
+
+            while self.stop_flag.value == 0:
+                total_length = 0
+                total_reward = 0
+
+            for s, a, r, accumulated_r in self.play_episode():
+                total_reward += accumulated_r
+                total_length += len(s)
+                self.training_queue.put((s,a,t))
+            self.episode_log_queue.put((datetime.now(), total_reward, total_length))
     
 
     

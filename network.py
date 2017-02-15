@@ -1,11 +1,32 @@
 import tensorflow as tf
 import numpy as np
+from settings import Settings
 
 '''
 Network structure from "Playing Atari with Deep Reinforcement Learning" by Mnih et al., 2013 
 as specified in "Asynchronous Methods for Deep Reinforcement Learning" by Mnih et al., 2016.
 '''
 class DeepQNetwork(object):
+    def __init__(self, device, random_seed, action_size, initial_learning_rate=0.0007, optimizer='rmsprop', rms_decay=0.99, rms_epsilon=0.1):
+        self.device = device
+        self.action_size = action_size
+        tf.set_random_seed(random_seed)
+
+        self.learning_rate_value = Settings.learning_rate
+
+        self.graph = tf.Graph()
+        with self.graph.as_default() as g:
+            with tf.device(self.device):
+                self._build_graph():
+                self.sess = tf.Session(
+                    graph=self.graph,
+                    config=tf.ConfigProto(allow_soft_replacement=True,
+                        log_device_placement=False))
+                init = tf.global_variables_initializer()
+                self.sess.run(init)
+
+            vars = tf.global_variables()
+
     '''
     Set up convolutional weight variable.
     '''
@@ -31,124 +52,127 @@ class DeepQNetwork(object):
     Set up 2D convolution.
     '''
     def conv2d(self, x, W, stride):
-        return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], 
-                            padding='VALID')
-
-    def __init__(self, name, device, random_seed, action_size, initial_learning_rate=0.0007, optimizer='rmsprop', rms_decay=0.99, rms_epsilon=0.1):
-        self.device = device
-
-        with tf.device(self.device) and tf.name_scope(name) as scope:
-            # Set random seed
-            tf.set_random_seed(random_seed)
+        return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='VALID')
 
 
-            with tf.name_scope('input') as scope:
-                # Action input batch with shape [?, action_size]
-                self.a = tf.placeholder(tf.float32, [None, action_size], name='action-input')
+    def build_network(self)
+        self.global_step = tf.Variable(0, trainable=False, name='global_step')
+        self.learning_rate = tf.placeholder(tf.float43, name='learning_rate', shape=[])
 
-                # State input batch with shape [?, 84, 84, 4]
-                self.s = tf.placeholder(tf.float32, shape=[None, 84, 84, 4], name='s-input')
+        with tf.name_scope('input') as scope:
+            # Action input batch with shape [?, action_size]
+            self.a = tf.placeholder(tf.float32, [None, action_size], name='action-input')
 
-                # Target Q-value batch with shape [?, 1]
-                self.y = tf.placeholder(tf.float32, shape=[None, 1], name='target-q_value')
+            # State input batch with shape [?, 84, 84, 4]
+            self.s = tf.placeholder(tf.float32, shape=[None, 84, 84, 4], name='s-input')
 
-            # Convolutional layer 1 weights and bias with stride=4
-            # Produces 16 19x19 outputs
-            with tf.name_scope('conv-1') as scope:
-                self.W_conv1 = self.conv_weight_variable([8, 8, 4, 16], 'w_conv1')
-                self.b_conv1 = self.bias_variable([16], 'b_conv1')
-                stride_1 = 4
+            # Target Q-value batch with shape [?, 1]
+            self.y = tf.placeholder(tf.float32, shape=[None, 1], name='target-q_value')
 
-                # Convolutional layer 1 output
-                with tf.name_scope('conv1-out') as scope:
-                    self.h_conv1 = tf.nn.relu(tf.add(self.conv2d(self.s, self.W_conv1, stride_1), self.b_conv1))
+        # Convolutional layer 1 weights and bias with stride=4
+        # Produces 16 19x19 outputs
+        with tf.name_scope('conv-1') as scope:
+            self.W_conv1 = tf.placeholder(tf.float32, shape=[8, 8, 4, 16], name='w_conv1')
+            self.b_conv1 = tf.placeholder(tf.float32, shape=[16], name='b_conv1')
+            stride_1 = 4
 
-            # Convolutional laer 2 weights and biases with stride=2
-            # Produces 32 9x9 outputs
-            with tf.name_scope('conv-2') as scope:
-                self.W_conv2 = self.conv_weight_variable([4, 4, 16, 32], name='w_conv2')
-                self.b_conv2 = self.bias_variable([32], name='b_conv2')
-                stride_2 = 2
+            # Convolutional layer 1 output
+            with tf.name_scope('conv1-out') as scope:
+                self.h_conv1 = tf.nn.relu(tf.add(self.conv2d(self.s, self.W_conv1, stride_1), self.b_conv1))
 
-                # Convolutional layer 2 output 
-                with tf.name_scope('conv2-out') as scope:
-                    self.h_conv2 = tf.nn.relu(tf.add(self.conv2d(self.h_conv1, self.W_conv2, stride_2), self.b_conv2))
+        # Convolutional laer 2 weights and biases with stride=2
+        # Produces 32 9x9 outputs
+        with tf.name_scope('conv-2') as scope:
+            self.W_conv2 = tf.placeholder(tf.float32, shape=[4, 4, 16, 32], name='w_conv2')
+            self.b_conv2 = tf.placeholder(tf.float32, shape=[32], name='b_conv2')
+            stride_2 = 2
 
-            # 256 Fully connected units with weights and biases
-            # Weights total 9x9x32 (2592) from the output of the 2nd convolutional layer
-            with tf.name_scope('fully_connected') as scope:
-                self.W_fc1 = self.weight_variable([2592, 256], name='w_fc')
-                self.b_fc1 = self.bias_variable([256], name='b_fc')
+            # Convolutional layer 2 output 
+            with tf.name_scope('conv2-out') as scope:
+                self.h_conv2 = tf.nn.relu(tf.add(self.conv2d(self.h_conv1, self.W_conv2, stride_2), self.b_conv2))
 
-                # Fully connected layer output
-                with tf.name_scope('fully-connected-out') as scope:
-                    h_conv2_flat = tf.reshape(self.h_conv2, [tf.negative(1), 2592])
-                    h_fc1 = tf.nn.relu(tf.add(tf.matmul(h_conv2_flat, self.W_fc1), self.b_fc1))
+        # 256 Fully connected units with weights and biases
+        # Weights total 9x9x32 (2592) from the output of the 2nd convolutional layer
+        with tf.name_scope('fully_connected') as scope:
+            self.W_fc1 = self.weight_variable([2592, 256], name='w_fc')
+            self.b_fc1 = self.bias_variable([256], name='b_fc')
 
-            # Output layer weights and biases
-            with tf.name_scope('output') as scope:
-                self.W_fc2 = self.weight_variable([256, action_size], name='w_out')
-                self.b_fc2 = self.bias_variable([action_size], name='b_out')
+            # Fully connected layer output
+            with tf.name_scope('fully-connected-out') as scope:
+                h_conv2_flat = tf.reshape(self.h_conv2, [tf.negative(1), 2592])
+                h_fc1 = tf.nn.relu(tf.add(tf.matmul(h_conv2_flat, self.W_fc1), self.b_fc1))
 
-                # Output
-                with tf.name_scope('q_values') as scope:
-                    self.q_values = tf.add(tf.matmul(h_fc1, self.W_fc2), self.b_fc2)
+        # Output layer weights and biases
+        with tf.name_scope('output') as scope:
+            self.W_fc2 = self.weight_variable([256, action_size], name='w_out')
+            self.b_fc2 = self.bias_variable([action_size], name='b_out')
 
-                self.lr = tf.Variable(0, name='learn_rate-input', trainable=False)
-
-                with tf.name_scope('loss'):
-                    target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
-                    self.loss_function = tf.reduce_mean(tf.square(tf.subtract(self.y, target_q_value)))
-
-                with tf.name_scope('gradients') as scope:
-                    self.gradients = tf.gradients(self.loss_function, self.get_variables())
-                   
-    def clip_gradients(ariables, gradients):
-        clip_ops = []
-        with tf.device(self.device):
-            for (variable, gradient) in zip(variables, gradients):
-                clipped_gradient = tf.clip_by_norm(gradient, 40.)
-                clipped_gradients.append((clipped_gradients, variable))
+            # Output
+            with tf.name_scope('q_values') as scope:
+                self.q_values = tf.add(tf.matmul(h_fc1, self.W_fc2), self.b_fc2)
 
 
-    def apply_gradients(self, variables, gradients):
-        clipped_gradients = []
-        with tf.device(self.device):
-            for (variable, gradient) in zip(variables, gradients):
-                clipped_gradient = tf.clip_by_norm(gradient, 40.)
-                clipped_gradients.append((clipped_gradients, variable))
+        with tf.name_scope('optimizer') as scope:
+            self.optimizer = self.opt = tf.train.RMSPropOptimizer(
+                learning_rate=self.learning_rate,
+                decay=Settings.rms_decay,
+                momentum=Settings.rms_momentum,
+                epsilon=Settings.rms_epsilon)
 
-            return optimizer_function.apply_gradients(clipped_gradients)
+            with tf.name_scope('loss') as scope:
+                target_q_value = tf.reduce_sum(tf.multiply(self.q_values, self.a), reduction_indices=1)
+                self.loss = tf.reduce_mean(tf.square(tf.subtract(self.y, target_q_value)))
 
-    def accumulate_gradients(self):
-        sess.run(self.gradients, feed_dict={self.s: s_input, self.a: a_input, self.y: y_input, self.lr: learn_rate})
+            with tf.name_scope('gradient_clipping') as scope:
+                self.gradients = self.optimizer.compute_gradients(self.loss)
+                self.clipped_gradients = [(tf.clip_by_average_norm(g, Settings.gradient_clip_norm), v) for g,v in self.gradient]
+                self.train_op = self.optimizer.apply_gradients(self.clipped_gradients)
 
+        with tf.name_scope('parameters') as scope:
+            self.theta = {
+                self.W_conv1: self.conv_weight_variable([8, 8, 4, 16], name='w_conv1'),
+                self.b_conv1: self.bias_variable([16], name='b_conv1'),
+                self.W_conv2: self.conv_weight_variable([4, 4, 16, 32], name='w_conv2'),
+                self.b_conv: self.bias_variable([32], name='b_conv2'),
+                self.W_fc1: self.weight_variable([2592, 256], name='w_fc'),
+                self.b_fc1: self.bias_variable([256], name='b_fc'),
+                self.W_fc2: self.weight_variable([256, self.action_size], name='w_out'),
+                self.b_fc2: self.bias_variable([action_size], name='b_out')
+                }
+
+            self.theta_target = theta.copy()
+
+    def get_global_step(self):
+        return self.sess.run(self.global_step)
+
+    def 
 
     '''
     Utilizes the optimizer and objectie function to train the network based on the input and target output.
     '''
-    def train(self, sess, s_input, a_input, y_input, learn_rate, g_step, train_op):
-        with tf.device(self.device):
-            #self.optimizer_function.learn_rate = learn_rate 
-            #train_op = self.apply_gradients(gradients)
-            _, loss = sess.run([train_op, self.loss_function], feed_dict={self.s: s_input, self.a: a_input, self.y: y_input, self.lr: learn_rate})
-            return loss
+    def train(self, s_input, a_input, y_input, learn_rate, g_step):
+        feed_dict = self.theta.copy()
+        feed_dict.update({
+            self.s: s_input, 
+            self.a: a_input, 
+            self.y: y_input, 
+            self.lr: learn_rate})
+
+        _, loss = sess.run([self.train_op, self.loss], feed_dict=feed_dict)
+        return loss
     '''
     Feeds a value through the network and produces an output.
     '''
-    def predict(self, sess, s_input):
-        with tf.device(self.device):
-            predicted_output = sess.run(self.q_values, feed_dict={self.s: s_input})
-            return predicted_output
+    def predict(self, s_input, target=False):
+        if target:
+            feed_dict = self.theta_target.copy()
+        else:
+            feed_dict = self.theta.copy()
+        
+        feed_dict.update({self.s: s_input})
+        predicted_output = sess.run(self.q_values, feed_dict=feed_dict)
+        return predicted_output
 
-    '''
-    Measures the accuracy of the network based on the specified accuracy measure, the input and the target output.
-    '''
-    def get_accuracy(self, sess, s_input, target_output):
-        with tf.device(self.device):
-            acc = sess.run(self.accuracy, feed_dict={self.s: s_input, 
-                                                        self.y: target_output})
-            return acc
 
     def get_variables(self):
         return [self.W_conv1, self.b_conv1, 
