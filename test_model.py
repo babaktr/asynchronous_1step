@@ -13,7 +13,7 @@ flags = tf.app.flags
 
 # General settings
 flags.DEFINE_string('mode', 'play', 'What to run with the loaded model [play, visualize].')
-flags.DEFINE_string('game', 'Breakout-v0', 'What game to play.')
+flags.DEFINE_string('game', 'BreakoutDeterministic-v0', 'What game to play.')
 flags.DEFINE_boolean('load_checkpoint', True, 'If it should load from available checkpoints.')
 flags.DEFINE_integer('random_seed', 123, 'Sets the random seed.')
 flags.DEFINE_boolean('log', False, 'For a verbose log.')
@@ -218,21 +218,23 @@ game_state = GameState(settings.random_seed,
 
 # Prepare online network
 game = game_state
-online_network = DeepQNetwork('online_network',
+
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
+                                        allow_soft_placement=True))
+online_network = DeepQNetwork('online_network', sess,
                             device, 
                             settings.random_seed, 
                             game.action_size)
 
 # Set target Deep Q Network
-target_network = DeepQNetwork('target_network',
+target_network = DeepQNetwork('target_network', sess,
                             device, 
                             settings.random_seed, 
                             game.action_size)
 
-sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
-                                        allow_soft_placement=True))
 
-experiment_name = 'asynchronous-1step-{}_game-{}_global-max-{}'.format(settings.method, 
+
+experiment_name = 'fixed-asynchronous-1step-{}_game-{}_global-max-{}'.format(settings.method, 
     settings.game, settings.global_max_steps)
 
 init = tf.global_variables_initializer()

@@ -16,7 +16,7 @@ class GameState(object):
         self.game = gym.make(game)
         self.game.seed(random_seed)
         # Get minimal action set
-        if game == 'Pong-v0' or game == 'Breakout-v0':
+        if game == 'PongDeterministic-v0' or game == 'BreakoutDeterministic-v0':
             self.action_size = 3
             # Shift action space from [0,1,2] --> [1,2,3]
             self.action_shift = 1
