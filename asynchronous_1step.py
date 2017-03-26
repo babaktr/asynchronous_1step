@@ -8,6 +8,8 @@ from stats import Stats
 from threading import Thread
 from threading import Lock
 
+from rmsprop_applier import RMSPropApplier
+
 import time 
 import signal
 import os
@@ -185,6 +187,7 @@ def worker_thread(thread_index, local_game_state):
     global stop_requested, global_step, increase_global_step, sess, stats, lock, eval_lock   # General
     global target_network, online_network, evaluation_network               # Networks
 
+
     # Set worker's initial and final epsilons
     final_epsilon = sample_final_epsilon()
     epsilon = 1.0
@@ -211,7 +214,7 @@ def worker_thread(thread_index, local_game_state):
 
         while not terminal:
             # Get the Q-values of the current state (s_t)
-            q_values = online_network.predict(sess, [state])
+            q_values = local_network.predict(sess, [state])
 
             # Anneal epsilon and select action (a_t)
             epsilon = anneal_epsilon(epsilon, final_epsilon, g_step)
@@ -238,7 +241,6 @@ def worker_thread(thread_index, local_game_state):
                 # Terminal state, update using reward
                 update = reward
 
-
             state_batch.append([state])
             action_batch.append(onehot_vector(action, local_game_state.action_size))
             target_batch.append([update])          
@@ -247,7 +249,7 @@ def worker_thread(thread_index, local_game_state):
             action_arr.append(action)
             reward_arr.append(reward)
             q_max_arr.append(np.max(q_values))
-            loss_arr.append(online_network.loss_value)
+            loss_arr.append(0)
             epsilon_arr.append(epsilon)
 
             # Update counters and values
@@ -258,6 +260,7 @@ def worker_thread(thread_index, local_game_state):
             if g_step % settings.target_network_update == 0 and lock.acquire(False):
                     try:
                         sess.run(target_network.sync_variables_from(online_network))
+                    
                     except IndexError:
                         print 'INDEX ERROR!'
                     except AssertionError:
@@ -267,6 +270,7 @@ def worker_thread(thread_index, local_game_state):
                         lock.release()
 
             if local_step % settings.local_max_steps == 0 or terminal:
+
                 loss = online_network.train(sess, np.vstack(state_batch), np.vstack(action_batch), np.vstack(target_batch), anneal_learning_rate(g_step), g_step)
                 loss_arr.append(loss)
 
@@ -342,18 +346,29 @@ for n in range(settings.parallel_agents):
 game = local_game_states[0]
 
 # Prepare online network
-online_network = DeepQNetwork('online_network', sess, device, settings.random_seed, game.action_size, 
-                            batch_size=settings.local_max_steps,
-                            initial_learning_rate=settings.learning_rate, 
-                            optimizer=settings.optimizer,
-                            rms_decay=settings.rms_decay,
-                            rms_epsilon=settings.rms_epsilon,
-                            clip_gradients=True)
+with tf.name_scope('online_network'):
+    online_network = DeepQNetwork('global_online_network', device, settings.random_seed, game.action_size, 
+                                initial_learning_rate=settings.learning_rate, 
+                                optimizer=settings.optimizer,
+                                rms_decay=settings.rms_decay,
+                                rms_epsilon=settings.rms_epsilon)
+
+    with tf.name_scope('local_networks') as scope:
+        local_networks = []
+        for n in range(settings.parallel_agents):
+            name = 'local_network_' + str(n)
+            local_network = DeepQNetwork(name, device, settings.random_seed, game.action_size,
+                                        initial_learning_rate=settings.learning_rate,
+                                        optimizer=settings.optimizer,
+                                        rms_decay=settings.rms_decay,
+                                        rms_epsilon=settings.rms_epsilon)
+            local_networks.append(local_network)
+
 
 # Prepare target network
-target_network = DeepQNetwork('target_network', sess, device, settings.random_seed, game.action_size)
+target_network = DeepQNetwork('target_network', device, settings.random_seed, game.action_size)
 # Prepare evaluation network
-evaluation_network = DeepQNetwork('evaluation_network', sess, device, settings.random_seed, game.action_size)
+evaluation_network = DeepQNetwork('evaluation_network', device, settings.random_seed, game.action_size)
 
 
 experiment_name = 'aggrlr-asynchronous-1step-{}_game-{}_global-max-{}'.format(settings.method, 
@@ -364,9 +379,6 @@ summary_dir = './logs/{}/'.format(experiment_name)
 summary_writer = tf.summary.FileWriter(summary_dir, sess.graph)
 stats = Stats(sess, summary_writer, settings.histogram_summary)
 
-init = tf.global_variables_initializer()
-sess.run(init)
-
 wall_t = 0
 
 # Checkpoint handler
@@ -376,12 +388,28 @@ if settings.load_checkpoint:
     wall_t, g_step = load_checkpoint(sess, saver, checkpoint_dir)
     sess.run(global_step.assign(g_step))
 
+shared_variables = online_network.get_variables()
+
+grad_applier = RMSPropApplier(learning_rate=settings.learning_rate,
+                            decay=settings.rms_decay,
+                            epsilon=settings.rms_epsilon,
+                            clip_norm=40.,
+                            device=device)
+
 # Prepare parallel workers
 workers = []
 for n in range(settings.parallel_agents):
+    with tf.device(device):
+        local_network = local_networks[n]
+        apply_gradients_op = grad_applier.apply_gradients(shared_variables, local_network.gradients)
+        sync_op = local_network.sync_variables_from(online_network)
+
     worker = Thread(target=worker_thread,
-                    args=(n, local_game_states[n]))
+                    args=(n, local_game_states[n], local_network, apply_gradients_op, sync_op))
     workers.append(worker)
+
+init = tf.global_variables_initializer()
+sess.run(init)
 
 signal.signal(signal.SIGINT, signal_handler)
 
